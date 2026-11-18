@@ -1,0 +1,666 @@
+/** Project-owned capture workers. Operator traffic never enters the Agent's replayd instance. */
+import { createHash, pbkdf2Sync, randomBytes, randomUUID, timingSafeEqual, X509Certificate } from "node:crypto";
+import { cpSync, existsSync, mkdirSync, readFileSync, renameSync, writeFileSync } from "node:fs";
+import { rm, stat, statfs } from "node:fs/promises";
+import { networkInterfaces } from "node:os";
+import { dirname, join, resolve } from "node:path";
+import { setTimeout as delay } from "node:timers/promises";
+import { containerPrefix, execInContainer, runDocker, CY_IMAGE } from "./docker.ts";
+import { installProjectMitmCa, projectMitmDirectory } from "./mitm-certificate.ts";
+import {
+	deleteMitmFlows,
+	getMitmFlow,
+	listMitmFlows,
+	MITM_DELETE_SCRIPT,
+	MITM_READ_SCRIPT,
+	MitmCountCache,
+	MitmError,
+	type MitmReader,
+	readMitmStore,
+} from "./mitm-store.ts";
+import type { MitmConfig, MitmStatus, MitmStorage } from "./mitm-types.ts";
+import { readReplaydBinary, replaydArchFromUname, replaydBinaryHint } from "./replayd-binary.ts";
+import {
+	prepareWebFuzzRaw,
+	readWebFuzzState,
+	saveWebFuzzResult,
+	sendWebFuzz,
+	validateWebFuzzRequest,
+	writeWebFuzzState,
+} from "./webfuzz.ts";
+import type { WebFuzzRequest, WebFuzzResult, WebFuzzState } from "./webfuzz-types.ts";
+
+interface MitmProject {
+	id: string;
+	name: string;
+	container?: string;
+}
+interface StoredMitmConfig extends Omit<MitmConfig, "hasPassword"> {
+	authSalt: string;
+	authPasswordHash: string;
+}
+
+function publicConfig(config: StoredMitmConfig): MitmConfig {
+	const { authSalt, authPasswordHash, ...visible } = config;
+	return { ...visible, hasPassword: Boolean(authSalt && authPasswordHash) };
+}
+interface DockerState {
+	State: { Running: boolean };
+	Config: { Labels: Record<string, string> | null };
+	NetworkSettings: { Ports: Record<string, { HostIp: string; HostPort: string }[] | null> };
+}
+
+export class MitmCenter {
+	private readonly root: string;
+	private readonly projects: () => MitmProject[];
+	private readonly docker: typeof runDocker;
+	private readonly locks = new Map<string, Promise<unknown>>();
+	private readonly deleting = new Set<string>();
+	private readonly replays = new Map<string, Set<AbortController>>();
+	private readonly flowCounts = new MitmCountCache();
+	private readonly storageCache = new Map<string, { at: number; value: Promise<MitmStorage> }>();
+	private liveReaders = 0;
+	constructor(agentDir: string, projects: () => MitmProject[], docker: typeof runDocker = runDocker) {
+		this.root = resolve(agentDir, "mitm");
+		this.projects = projects;
+		this.docker = docker;
+	}
+
+	private project(id: string): MitmProject {
+		const project = this.projects().find((entry) => entry.id === id);
+		if (!project || !/^[a-zA-Z0-9_-]{1,80}$/.test(id) || this.deleting.has(id))
+			throw new MitmError("项目不存在或正在删除。", 404);
+		return project;
+	}
+
+	directory(id: string): string {
+		this.project(id);
+		return projectMitmDirectory(dirname(this.root), id);
+	}
+
+	webFuzzState(id: string): WebFuzzState {
+		this.project(id);
+		return readWebFuzzState(join(this.root, id));
+	}
+
+	saveWebFuzzState(id: string, value: unknown): void {
+		this.project(id);
+		writeWebFuzzState(join(this.root, id), value);
+	}
+
+	async importWebFuzz(id: string, flowId: unknown): Promise<WebFuzzRequest> {
+		if (typeof flowId !== "string") throw new MitmError("请选择流量记录。");
+		const detail = await getMitmFlow(this.directory(id), flowId, await this.reader(id));
+		this.project(id);
+		if (detail.request.encoding !== "utf8" || detail.request.truncated || detail.request.captureTruncated)
+			throw new MitmError("报文为二进制或已截断，无法完整导入；请手动构造请求。");
+		const host = detail.host.includes(":") && !detail.host.startsWith("[") ? `[${detail.host}]` : detail.host;
+		return validateWebFuzzRequest({
+			raw: detail.request.text,
+			target: `${detail.scheme}://${host}:${detail.port}`,
+			route: "project",
+			timeoutMs: 30000,
+			insecureTLS: false,
+			fixContentLength: true,
+		});
+	}
+
+	async replay(
+		id: string,
+		value: unknown,
+		password: unknown,
+		signal: AbortSignal,
+		assertAccess: () => void,
+	): Promise<WebFuzzResult> {
+		const input = validateWebFuzzRequest(value);
+		prepareWebFuzzRaw(input);
+		const project = this.project(id);
+		const active = this.replays.get(id) ?? new Set<AbortController>();
+		if (active.size >= 4) throw new MitmError("当前项目最多同时发送 4 个请求。", 429);
+		const controller = new AbortController();
+		const abort = () => controller.abort();
+		signal.addEventListener("abort", abort, { once: true });
+		if (signal.aborted) abort();
+		active.add(controller);
+		this.replays.set(id, active);
+		try {
+			let network = "bridge";
+			let upstreamProxy: string | undefined;
+			let proxyAuthorization: string | undefined;
+			let caPath: string | undefined;
+			if (input.route === "project") {
+				if (!project.container) throw new MitmError("当前项目未配置工作容器。", 409);
+				network = `container:${project.container}`;
+			} else if (input.route === "mitm") {
+				if (!(await this.inspect(id))?.State.Running) throw new MitmError("请先启动当前项目的 MITM 代理。", 409);
+				network = `container:${this.container(id)}`;
+				const proxy = new URL("http://127.0.0.1:8080");
+				const config = this.config(id);
+				if (config.authEnabled) {
+					if (typeof password !== "string" || !/^[\x20-\x7e]{8,128}$/.test(password))
+						throw new MitmError("请输入当前项目的 MITM 代理密码。");
+					const hash = pbkdf2Sync(password, Buffer.from(config.authSalt, "hex"), 100000, 32, "sha256");
+					if (!timingSafeEqual(hash, Buffer.from(config.authPasswordHash, "hex")))
+						throw new MitmError("MITM 代理密码错误。", 403);
+					proxy.username = config.authUsername;
+					proxy.password = password;
+					proxyAuthorization = `Basic ${Buffer.from(`${config.authUsername}:${password}`).toString("base64")}`;
+				}
+				upstreamProxy = proxy.href;
+				const cert = join(this.directory(id), "ca", "ca.crt");
+				if (existsSync(cert)) caPath = cert;
+			}
+			assertAccess();
+			this.project(id);
+			const result = await sendWebFuzz(
+				input,
+				{
+					binDirectory: join(this.root, "bin"),
+					network,
+					upstreamProxy,
+					proxyAuthorization,
+					caPath,
+					signal: controller.signal,
+				},
+				{ docker: this.docker, exec: execInContainer, binary: readReplaydBinary },
+			);
+			assertAccess();
+			this.project(id);
+			saveWebFuzzResult(join(this.root, id), result);
+			return result;
+		} finally {
+			signal.removeEventListener("abort", abort);
+			active.delete(controller);
+			if (!active.size) this.replays.delete(id);
+		}
+	}
+	private container(id: string): string {
+		return `${containerPrefix()}mitm-${id}`;
+	}
+	private owner(id: string): string {
+		return createHash("sha256").update(`${this.root}/${id}`).digest("hex");
+	}
+	private configPath(id: string): string {
+		return join(this.root, id, "config.json");
+	}
+
+	private config(id: string): StoredMitmConfig {
+		const path = this.configPath(id);
+		if (!existsSync(path)) return this.validate({ bind: "127.0.0.1", port: 0 });
+		return this.validate(JSON.parse(readFileSync(path, "utf8")));
+	}
+	private validate(value: unknown): StoredMitmConfig {
+		const raw = value as Partial<StoredMitmConfig> | null;
+		if (
+			!raw ||
+			!["127.0.0.1", "0.0.0.0"].includes(raw.bind ?? "") ||
+			!Number.isSafeInteger(raw.port) ||
+			(raw.port ?? -1) < 0 ||
+			(raw.port ?? 65536) > 65535
+		)
+			throw new MitmError("监听地址无效；端口应为 1–65535，或填 0 自动分配。");
+		const skipStatic = raw.skipStatic ?? true;
+		const maxCaptureMb = raw.maxCaptureMb ?? 2;
+		const maxConnections = raw.maxConnections ?? 128;
+		if (!Number.isInteger(maxConnections) || maxConnections < 1 || maxConnections > 1024)
+			throw new MitmError("同时连接上限应为 1–1024。");
+		if (typeof skipStatic !== "boolean" || !Number.isInteger(maxCaptureMb) || maxCaptureMb < 1 || maxCaptureMb > 32)
+			throw new MitmError("报文保存上限应为 1–32 MB，静态资源过滤应为开关值。");
+		const authEnabled = raw.authEnabled ?? false;
+		const authUsername = raw.authUsername ?? "";
+		const authSalt = raw.authSalt ?? "";
+		const authPasswordHash = raw.authPasswordHash ?? "";
+		if (
+			typeof authEnabled !== "boolean" ||
+			typeof authUsername !== "string" ||
+			!/^[\x21-\x39\x3b-\x7e]{0,64}$/.test(authUsername) ||
+			(authEnabled && !authUsername) ||
+			typeof authSalt !== "string" ||
+			typeof authPasswordHash !== "string" ||
+			(authEnabled && (!/^[a-f0-9]{32}$/.test(authSalt) || !/^[a-f0-9]{64}$/.test(authPasswordHash)))
+		)
+			throw new MitmError("请设置代理账号和密码；账号应为 1–64 位可见 ASCII 字符，不含冒号或空格。");
+		return {
+			bind: raw.bind as MitmConfig["bind"],
+			port: raw.port as number,
+			skipStatic,
+			maxCaptureMb,
+			maxConnections,
+			authEnabled,
+			authUsername,
+			authSalt,
+			authPasswordHash,
+		};
+	}
+	private writeConfig(id: string, config: StoredMitmConfig): void {
+		mkdirSync(join(this.root, id), { recursive: true, mode: 0o700 });
+		const path = this.configPath(id);
+		writeFileSync(`${path}.tmp`, JSON.stringify(config), { mode: 0o600 });
+		renameSync(`${path}.tmp`, path);
+	}
+
+	private async inspect(id: string): Promise<DockerState | null> {
+		const result = await this.docker(["inspect", this.container(id)], { timeoutMs: 15000 });
+		if (result.code !== 0) {
+			if (/no such (object|container)/i.test(result.stderr)) return null;
+			throw new MitmError(`无法检查 MITM 容器：${result.stderr.trim().slice(-1000)}`, 503);
+		}
+		const state = (JSON.parse(result.stdout) as DockerState[])[0];
+		if (state?.Config?.Labels?.["cy.mitm.owner"] !== this.owner(id))
+			throw new MitmError("MITM 容器名被其他实例占用，请先检查 Docker。", 409);
+		return state;
+	}
+
+	private exclusive<T>(id: string, action: () => Promise<T>): Promise<T> {
+		const previous = this.locks.get(id) ?? Promise.resolve();
+		const task = previous.catch(() => undefined).then(action);
+		this.locks.set(id, task);
+		void task
+			.finally(() => {
+				if (this.locks.get(id) === task) this.locks.delete(id);
+			})
+			.catch(() => {});
+		return task;
+	}
+
+	certificate(id: string, format: "pem" | "crt"): Buffer {
+		const path = join(this.directory(id), "ca", "ca.crt");
+		if (!existsSync(path)) throw new MitmError("首次启动代理后才会生成项目 CA。", 404);
+		const bytes = readFileSync(path);
+		return format === "pem" ? bytes : new X509Certificate(bytes).raw;
+	}
+
+	/** Docker Desktop cannot safely share WAL shared memory between Linux and the host. */
+	async listFlows(id: string, params: URLSearchParams) {
+		return listMitmFlows(this.directory(id), params, await this.reader(id), this.flowCounts);
+	}
+
+	async storage(id: string): Promise<MitmStorage> {
+		const directory = this.directory(id);
+		const cached = this.storageCache.get(id);
+		if (cached && Date.now() - cached.at < 60000) return cached.value;
+		const value = (async () => {
+			const reader = await this.reader(id);
+			const rows =
+				existsSync(join(directory, "replayd.db")) || reader
+					? await (reader ?? readMitmStore(directory))([
+							{ sql: "SELECT COALESCE(SUM(size), 0) AS bytes FROM blobs", params: [] },
+						])
+					: [[]];
+			const sizes = await Promise.all(
+				["replayd.db", "replayd.db-wal"].map(async (name) => {
+					try {
+						return (await stat(join(directory, name))).size;
+					} catch (error) {
+						if ((error as NodeJS.ErrnoException).code === "ENOENT") return 0;
+						throw error;
+					}
+				}),
+			);
+			const disk = await statfs(existsSync(directory) ? directory : dirname(this.root));
+			const freeBytes = disk.bavail * disk.bsize;
+			const capacityBytes = disk.blocks * disk.bsize;
+			return {
+				usedBytes:
+					Number((rows[0][0] as { bytes: number } | undefined)?.bytes ?? 0) + sizes.reduce((a, b) => a + b, 0),
+				freeBytes,
+				capacityBytes,
+				lowSpace: freeBytes < 1024 ** 3 || (capacityBytes > 0 && freeBytes / capacityBytes < 0.05),
+				updatedAt: Date.now(),
+			};
+		})();
+		if (this.storageCache.size >= 64) this.storageCache.delete(this.storageCache.keys().next().value!);
+		const entry = { at: Date.now(), value };
+		this.storageCache.set(id, entry);
+		try {
+			return await value;
+		} catch (error) {
+			if (this.storageCache.get(id) === entry) this.storageCache.delete(id);
+			throw error;
+		}
+	}
+
+	async reader(id: string): Promise<MitmReader | undefined> {
+		this.project(id);
+		if (!(await this.inspect(id))?.State.Running) return undefined;
+		return async (queries) => {
+			this.project(id);
+			if (this.liveReaders >= 4) throw new MitmError("实时流量查询繁忙，请稍后重试。", 503);
+			this.liveReaders++;
+			try {
+				const result = await this.docker(
+					["exec", this.container(id), "python3", "-c", MITM_READ_SCRIPT, JSON.stringify(queries)],
+					{ timeoutMs: 10000 },
+				);
+				if (result.code !== 0) throw new MitmError("读取实时流量失败，请刷新重试或检查 MITM 容器日志。", 503);
+				return JSON.parse(result.stdout) as unknown[][];
+			} finally {
+				this.liveReaders--;
+			}
+		};
+	}
+
+	async status(id: string): Promise<MitmStatus> {
+		const project = this.project(id);
+		const config = publicConfig(this.config(id));
+		const lanIps = [
+			...new Set(
+				Object.values(networkInterfaces()).flatMap((addresses) =>
+					(addresses ?? [])
+						.filter((address) => !address.internal && address.family === "IPv4")
+						.map((address) => address.address),
+				),
+			),
+		];
+		let ca: MitmStatus["ca"] = null;
+		const path = join(this.directory(id), "ca", "ca.crt");
+		if (existsSync(path)) {
+			const cert = new X509Certificate(readFileSync(path));
+			ca = { fingerprint: cert.fingerprint256, subject: cert.subject, expires: cert.validTo };
+		}
+		try {
+			const state = await this.inspect(id);
+			const port = Number(state?.NetworkSettings.Ports["8080/tcp"]?.[0]?.HostPort) || null;
+			return {
+				project,
+				config,
+				state: state ? (state.State.Running ? "running" : "stopped") : "missing",
+				port,
+				lanIps,
+				ca,
+			};
+		} catch (error) {
+			return {
+				project,
+				config,
+				state: "unavailable",
+				port: null,
+				lanIps,
+				ca,
+				error: error instanceof Error ? error.message : String(error),
+			};
+		}
+	}
+
+	save(id: string, value: unknown): Promise<MitmStatus> {
+		return this.exclusive(id, async () => {
+			this.project(id);
+			const running = (await this.inspect(id))?.State.Running;
+			if (!value || typeof value !== "object" || Array.isArray(value)) throw new MitmError("代理配置格式错误。");
+			const raw = value as Partial<MitmConfig> & { password?: unknown };
+			const previous = this.config(id);
+			let authSalt = previous.authSalt;
+			let authPasswordHash = previous.authPasswordHash;
+			if (raw.password !== undefined && typeof raw.password !== "string") throw new MitmError("代理密码格式错误。");
+			if (typeof raw.password === "string" && raw.password !== "") {
+				if (!/^[\x20-\x7e]{8,128}$/.test(raw.password))
+					throw new MitmError("代理密码应为 8–128 位可见 ASCII 字符。");
+				authSalt = randomBytes(16).toString("hex");
+				authPasswordHash = pbkdf2Sync(raw.password, Buffer.from(authSalt, "hex"), 100000, 32, "sha256").toString(
+					"hex",
+				);
+			}
+			const authEnabled = raw.authEnabled ?? previous.authEnabled;
+			const next = this.validate({
+				bind: raw.bind,
+				port: raw.port,
+				skipStatic: raw.skipStatic,
+				maxCaptureMb: raw.maxCaptureMb,
+				maxConnections: raw.maxConnections ?? previous.maxConnections,
+				authEnabled,
+				authUsername: raw.authUsername ?? previous.authUsername,
+				authSalt: authEnabled ? authSalt : "",
+				authPasswordHash: authEnabled ? authPasswordHash : "",
+			});
+			if (JSON.stringify(next) === JSON.stringify(previous)) return this.status(id);
+			if (!running) {
+				this.writeConfig(id, next);
+				return this.status(id);
+			}
+			await this.stopUnlocked(id);
+			try {
+				this.writeConfig(id, next);
+				return await this.startUnlocked(id);
+			} catch (error) {
+				this.writeConfig(id, previous);
+				try {
+					await this.stopUnlocked(id);
+					await this.startUnlocked(id);
+				} catch (recovery) {
+					throw new MitmError(
+						`配置应用失败，原配置已恢复但代理重启失败：${recovery instanceof Error ? recovery.message : String(recovery)}`,
+						502,
+					);
+				}
+				throw new MitmError(
+					`配置应用失败，已恢复原配置和代理：${error instanceof Error ? error.message : String(error)}`,
+					502,
+				);
+			}
+		});
+	}
+
+	start(id: string): Promise<MitmStatus> {
+		return this.exclusive(id, () => this.startUnlocked(id));
+	}
+
+	private async startUnlocked(id: string): Promise<MitmStatus> {
+		this.project(id);
+		const state = await this.inspect(id);
+		if (state?.State.Running) {
+			await installProjectMitmCa(dirname(this.root), this.project(id), this.docker);
+			return this.status(id);
+		}
+		const image = await this.docker(["image", "inspect", "--format", "{{.Architecture}}", CY_IMAGE], {
+			timeoutMs: 15000,
+		});
+		if (image.code !== 0) throw new MitmError("请先在「设置 → 环境」构建工具镜像。", 409);
+		const arch = replaydArchFromUname(image.stdout.trim());
+		if (!arch) throw new MitmError("MITM 服务仅支持 Linux amd64 / arm64 工具镜像。", 409);
+		const binary = readReplaydBinary(arch);
+		if (!binary) throw new MitmError(replaydBinaryHint(arch), 409);
+		const binDirectory = join(this.root, "bin");
+		mkdirSync(binDirectory, { recursive: true, mode: 0o700 });
+		const binPath = join(binDirectory, `replayd-${arch}-${binary.sha256}`);
+		if (!existsSync(binPath)) writeFileSync(binPath, binary.bytes, { mode: 0o755 });
+		const directory = this.directory(id);
+		mkdirSync(directory, { recursive: true, mode: 0o700 });
+		const config = this.config(id);
+		this.writeConfig(id, config);
+		if (state) {
+			const removed = await this.docker(["rm", this.container(id)], { timeoutMs: 15000 });
+			if (removed.code !== 0) throw new MitmError(`无法更新 MITM 容器：${removed.stderr}`, 502);
+		}
+		// Management API stays on the container loopback; only the proxy is published.
+		const started = await this.docker(
+			[
+				"run",
+				"-d",
+				"--init",
+				"--name",
+				this.container(id),
+				"--label",
+				`cy.mitm.owner=${this.owner(id)}`,
+				"--cap-drop",
+				"ALL",
+				"--security-opt",
+				"no-new-privileges",
+				"--pids-limit",
+				"128",
+				"--log-opt",
+				"max-size=10m",
+				"--log-opt",
+				"max-file=2",
+				"--user",
+				`${process.getuid?.() ?? 0}:${process.getgid?.() ?? 0}`,
+				"-e",
+				"HOME=/data",
+				"--add-host",
+				"host.docker.internal:host-gateway",
+				"-p",
+				`${config.bind}:${config.port}:8080`,
+				"-v",
+				`${directory}:/data`,
+				"-v",
+				`${binPath}:/opt/mitm/replayd:ro`,
+				"-v",
+				`${this.configPath(id)}:/opt/mitm/proxy-auth.json:ro`,
+				"--entrypoint",
+				"/opt/mitm/replayd",
+				CY_IMAGE,
+				"-data-dir",
+				"/data",
+				"-listen",
+				"127.0.0.1:8081",
+				"-proxy-listen",
+				"0.0.0.0:8080",
+				"-proxy-auth-file",
+				"/opt/mitm/proxy-auth.json",
+				`-proxy-skip-static=${config.skipStatic}`,
+				"-proxy-max-capture-bytes",
+				String(config.maxCaptureMb * 1024 * 1024),
+				"-proxy-max-connections",
+				String(config.maxConnections),
+				"-quiet",
+				"-log-format",
+				"json",
+			],
+			{ timeoutMs: 60000 },
+		);
+		if (started.code !== 0)
+			throw new MitmError(`代理启动失败，请检查端口占用及 Docker：${started.stderr.trim().slice(-1500)}`, 502);
+		try {
+			for (let attempt = 0; attempt < 30; attempt++) {
+				this.project(id);
+				const health = await this.docker(
+					["exec", this.container(id), "curl", "-fsS", "--max-time", "2", "http://127.0.0.1:8081/api/health"],
+					{ timeoutMs: 5000 },
+				);
+				if (health.code === 0) {
+					const status = await this.status(id);
+					if (status.state === "running" && status.port && status.ca) {
+						this.writeConfig(id, { ...config, port: status.port });
+						await installProjectMitmCa(dirname(this.root), this.project(id), this.docker);
+						return { ...status, config: publicConfig({ ...config, port: status.port }) };
+					}
+				}
+				await delay(200);
+			}
+			const log = await this.docker(["logs", "--tail", "15", this.container(id)], { timeoutMs: 5000 });
+			throw new MitmError(`MITM 服务未就绪：${(log.stderr || log.stdout).slice(-1500)}`, 502);
+		} catch (error) {
+			await this.docker(["stop", "--time", "2", this.container(id)], { timeoutMs: 10000 });
+			throw error;
+		}
+	}
+
+	stop(id: string): Promise<MitmStatus> {
+		return this.exclusive(id, () => this.stopUnlocked(id));
+	}
+
+	private async stopUnlocked(id: string): Promise<MitmStatus> {
+		this.project(id);
+		const state = await this.inspect(id);
+		if (state?.State.Running) {
+			const stopped = await this.docker(["stop", "--time", "2", this.container(id)], { timeoutMs: 15000 });
+			if (stopped.code !== 0) throw new MitmError(`停止代理失败：${stopped.stderr}`, 502);
+		}
+		return this.status(id);
+	}
+
+	deleteFlows(id: string, ids: unknown): Promise<number> {
+		return this.exclusive(id, async () => {
+			this.project(id);
+			if (ids === undefined) throw new MitmError("请选择要删除的流量记录。");
+			return this.deleteRecords(id, ids, Boolean((await this.inspect(id))?.State.Running));
+		});
+	}
+
+	private deleteRecords(id: string, ids: unknown, running: boolean): Promise<number> {
+		return deleteMitmFlows(
+			this.directory(id),
+			ids,
+			running
+				? async (queries) => {
+						const result = await this.docker(
+							["exec", this.container(id), "python3", "-c", MITM_DELETE_SCRIPT, JSON.stringify(queries)],
+							{ timeoutMs: 30000 },
+						);
+						if (result.code !== 0)
+							throw new MitmError("流量清理未完成，部分批次可能已删除，请刷新后重试或检查 MITM 容器日志。", 503);
+						const deleted: unknown = JSON.parse(result.stdout);
+						if (typeof deleted !== "number" || !Number.isSafeInteger(deleted) || deleted < 0)
+							throw new MitmError("删除流量返回无效结果。", 502);
+						return deleted;
+					}
+				: undefined,
+		).finally(() => {
+			this.flowCounts.clear();
+			this.storageCache.delete(id);
+		});
+	}
+
+	clear(id: string): Promise<void> {
+		return this.exclusive(id, async () => {
+			this.flowCounts.clear();
+			this.storageCache.delete(id);
+			this.project(id);
+			const state = await this.inspect(id);
+			if (state?.State.Running) {
+				await this.deleteRecords(id, undefined, true);
+				return;
+			}
+			const directory = this.directory(id);
+			if (!existsSync(directory)) return;
+			if (state) {
+				const removed = await this.docker(["rm", this.container(id)], { timeoutMs: 15000 });
+				if (removed.code !== 0) throw new MitmError(`无法释放 MITM 数据目录：${removed.stderr}`, 502);
+			}
+			// Use a new mount path: Docker Desktop can cache deleted SQLite paths across containers.
+			const name = `data-${randomUUID()}`;
+			const next = join(this.root, id, name);
+			const pointer = join(this.root, id, "capture.json");
+			mkdirSync(next, { mode: 0o700 });
+			let switched = false;
+			try {
+				for (const name of ["ca", "token"]) {
+					if (existsSync(join(directory, name)))
+						cpSync(join(directory, name), join(next, name), { recursive: true });
+				}
+				writeFileSync(`${pointer}.tmp`, JSON.stringify(name), { mode: 0o600 });
+				renameSync(`${pointer}.tmp`, pointer);
+				switched = true;
+				await rm(directory, { recursive: true, force: true });
+			} finally {
+				if (!switched) await rm(next, { recursive: true, force: true });
+			}
+		}).finally(() => {
+			this.flowCounts.clear();
+			this.storageCache.delete(id);
+		});
+	}
+
+	/** Stop before unregistering a project, so failed cleanup can still be retried. */
+	purge(id: string): Promise<void>;
+	purge<T>(id: string, unregister: () => Promise<T>): Promise<T>;
+	purge<T>(id: string, unregister?: () => Promise<T>): Promise<T | undefined> {
+		this.project(id);
+		this.deleting.add(id);
+		for (const controller of this.replays.get(id) ?? []) controller.abort();
+		return this.exclusive(id, async () => {
+			try {
+				if (existsSync(join(this.root, id)) && (await this.inspect(id))) {
+					const removed = await this.docker(["rm", "-f", this.container(id)], { timeoutMs: 20000 });
+					if (removed.code !== 0) throw new MitmError(`无法清理项目 MITM 容器：${removed.stderr}`, 502);
+				}
+				await rm(join(this.root, id), { recursive: true, force: true });
+				// Keep starts blocked until the registry operation has completed too.
+				return await unregister?.();
+			} finally {
+				this.deleting.delete(id);
+				this.flowCounts.clear();
+				this.storageCache.delete(id);
+			}
+		});
+	}
+}

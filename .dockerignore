@@ -1,0 +1,5 @@
+# 构建上下文瘦身：只保留源码，构建产物在镜像内重新生成。
+.git
+**/node_modules
+**/dist
+**/tsconfig.tsbuildinfo

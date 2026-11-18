@@ -1,0 +1,151 @@
+.console-page > .ui-page.doctrine-manager {
+	flex: 1;
+	min-height: 0;
+	overflow: hidden;
+}
+
+.doctrine-manager > .ui-page__body {
+	overflow-y: auto;
+	overscroll-behavior-y: contain;
+	scrollbar-gutter: stable;
+}
+
+.doctrine-manager__layout {
+	min-width: 0;
+}
+
+.doctrine-manager__toolbar {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	flex-wrap: wrap;
+	gap: 12px;
+}
+
+.doctrine-manager__toolbar .ant-input-search {
+	width: min(100%, 300px);
+}
+
+.doctrine-manager__library,
+.doctrine-manager__label {
+	min-width: 0;
+}
+
+.doctrine-manager__list {
+	margin-top: 10px;
+	background: transparent;
+}
+
+.doctrine-manager__list .ant-collapse-title {
+	min-width: 0;
+	flex: 1;
+}
+
+.doctrine-manager__list .ant-collapse-header {
+	align-items: center;
+}
+
+.doctrine-manager__label > .ant-space {
+	max-width: 100%;
+	overflow-wrap: anywhere;
+}
+
+.doctrine-manager__preview {
+	display: block;
+	margin-top: 4px;
+	overflow: hidden;
+	font-size: 12px;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+
+.doctrine-manager__text {
+	margin: 0;
+	color: var(--ant-color-text-secondary, #475467);
+	font: inherit;
+	font-size: 12px;
+	line-height: 1.8;
+	white-space: pre-wrap;
+	overflow-wrap: anywhere;
+}
+
+.engine-target-files {
+	min-width: 0;
+	margin-top: 12px;
+}
+
+.engine-target-files__hint {
+	display: block;
+	margin-top: 8px;
+	font-size: 12px;
+	line-height: 1.6;
+}
+
+.engine-target-files .ant-upload-list-item-name {
+	min-width: 0;
+}
+
+.engine-target-files .ant-alert {
+	margin-top: 8px;
+}
+
+.enginewiz-agent-entry {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: 12px;
+	margin-top: 16px;
+	padding-top: 12px;
+	border-top: 1px solid var(--console-border);
+}
+
+.enginewiz-agent-entry__summary {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: baseline;
+	gap: 4px 12px;
+	min-width: 0;
+}
+
+.enginewiz-agent-entry__summary > .ant-typography-secondary {
+	font-size: 12px;
+}
+
+.enginewiz-agent-drawer__content {
+	display: flex;
+	flex-direction: column;
+	gap: 16px;
+	min-width: 0;
+}
+
+.enginewiz-agent-drawer__list {
+	display: flex;
+	flex-direction: column;
+}
+
+.enginewiz-agent-option {
+	align-items: flex-start;
+	width: 100%;
+	padding: 12px 0;
+	border-bottom: 1px solid var(--console-border);
+}
+
+.enginewiz-agent-option > span:last-child {
+	min-width: 0;
+	overflow-wrap: anywhere;
+}
+
+.enginewiz-agent-drawer .enginewiz-agent-option .ant-checkbox {
+	align-self: flex-start;
+	margin-top: 3px;
+}
+
+.enginewiz-agent-drawer__policy {
+	padding-top: 4px;
+}
+
+.enginewiz-agent-drawer__footer {
+	display: flex;
+	justify-content: space-between;
+	gap: 12px;
+}

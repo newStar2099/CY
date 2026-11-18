@@ -1,0 +1,9 @@
+{
+	"version": 1,
+	"username": "admin",
+	"salt": "6f3b306dfe4812b9b074bd8f516f61ee",
+	"hash": "3a1e2c133ccb20ffa2fac895ffab7545d1f2ef262fcaf5f159a5e7e71c4cb443d6af3110ca1255fd1e484a90651276ad4b7c03fceae414518eb8e0a82418a62f",
+	"secret": "a4ae22a2f39748ac04702639790efb707a29e31da4a8ec4209e6369e679aa03f",
+	"createdAt": "2026-11-18T05:50:06.000Z",
+	"validAfter": 0
+}

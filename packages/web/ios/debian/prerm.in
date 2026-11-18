@@ -1,0 +1,13 @@
+#!/bin/sh
+set -e
+
+LABEL="com.zgsfsec.cybridged"
+WATCH_LABEL="com.zgsfsec.cybridgewatchdog"
+PLIST="@PLIST@"
+WATCH_PLIST="@WATCH_PLIST@"
+
+launchctl bootout "system/$WATCH_LABEL" 2>/dev/null || true
+launchctl unload "$WATCH_PLIST" 2>/dev/null || true
+launchctl bootout "system/$LABEL" 2>/dev/null || true
+launchctl unload "$PLIST" 2>/dev/null || true
+exit 0

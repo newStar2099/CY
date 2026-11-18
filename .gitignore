@@ -1,0 +1,77 @@
+node_modules/
+dist/
+.artifacts/
+*.log
+.DS_Store
+*.tsbuildinfo
+# packages/*/node_modules/
+packages/*/dist/
+packages/*/dist-chrome/
+packages/*/dist-firefox/
+# packages/ai/src/providers/data/ is tracked on purpose. The model-id type unions
+# and the test expectations derive from it, so it must not drift with the live
+# catalog. Refresh it deliberately with `npm run generate-models` and commit.
+packages/ai/src/providers/.model-generation-*/
+*.cpuprofile
+
+# Environment
+.env
+
+# Editor files
+.vscode/
+.zed/
+.idea/
+.claude/
+*.swp
+*.swo
+*~
+
+# Package specific
+packages/web/binaries/
+# Container binaries built into the console's release layout (see build-web-binaries.sh).
+packages/web/replayd/
+.npm/
+coverage/
+.nyc_output/
+.pi_config/
+tui-debug.log
+compaction-results/
+.opencode/
+syntax.jsonl
+out.jsonl
+pi-*.html
+out.html
+packages/coding-agent/binaries/
+packages/env/bin/
+packages/env/daemon/target/
+todo.md
+plans/
+.pi/hf-sessions/
+.pi/hf-sessions-backup/
+collect.sh
+packages/agent/docs/extensions/pi-server-artifact/index.md
+
+# Full Chain Sentinel web: test-only tool binaries (macOS arm64 copies)
+packages/web/test/fixtures/bin/
+packages/coding-agent/test/fixtures/bin/
+
+# DroidBridge APK build outputs
+packages/droid-apk/.gradle/
+packages/droid-apk/app/build/
+packages/droid-apk/build/
+packages/droid-apk/local.properties
+
+# DOOM overlay example: build intermediates. The compiled output in
+# doom/build/ is tracked on purpose, it ships with the GPLv2 license and source.
+packages/coding-agent/examples/extensions/doom-overlay/doom/doomgeneric/doomgeneric/doomgeneric_pi.c
+packages/coding-agent/examples/extensions/doom-overlay/doom/doomgeneric/doomgeneric/*.o
+packages/coding-agent/examples/extensions/doom-overlay/doom/doomgeneric/doomgeneric/*.bc
+
+# Obsidian editor config (local notes workspace)
+.obsidian/
+
+# workbuddy local agent memory (never tracked)
+.workbuddy-ai/
+
+# Local UI previews/screenshots: generated for design review, never committed.
+droid-ui-previews/

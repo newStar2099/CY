@@ -1,0 +1,26 @@
+# 长缨在手控制台 compose 编排文件。
+#
+# 用法：
+#   docker compose -f /root/fcss/docker-compose.yml up -d
+#   docker compose -f /root/fcss/docker-compose.yml down          # 不删数据
+#
+# 数据在宿主机 /data（必须同路径绑定挂载，不能用 named volume：控制台会把
+# /data 下的 DNS/代理配置与项目目录作为 bind 源传给宿主机守护进程创建工作容器，
+# 路径不一致会导致 "mount a directory onto a file" 之类的创建失败）。
+#
+# 命名约定：控制台镜像 cy-console、工具镜像 cy:latest（源码 CY_IMAGE）、
+# 项目工作容器 cy-<项目ID>、网关 cy-sb-<项目ID>（容器前缀源码里默认 cy-）。
+
+services:
+  cy:
+    image: ${CY_IMAGE:-cy-console:1.1.0}
+    container_name: ${CY_CONTAINER_NAME:-cy}
+    ports:
+      - "${CY_PORT:-7777}:7777"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - ${CY_DATA_DIR:-/data}:/data
+    # 额外参数追加到 ENTRYPOINT（node packages/web/dist/index.js --host 0.0.0.0）：
+    # --no-gate 关闭随机入口令牌；--no-tls 关闭自签 HTTPS；--tls-cert/--tls-key 指定证书。
+    command: ${CY_ARGS:---no-gate}
+    restart: unless-stopped

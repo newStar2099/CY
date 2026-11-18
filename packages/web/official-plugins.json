@@ -1,0 +1,7 @@
+{
+	"plugins": [
+		"plugins/memshell-party",
+		"plugins/vshell",
+		"plugins/java-chains"
+	]
+}

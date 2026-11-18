@@ -1,0 +1,78 @@
+/**
+ * Rebuilding a project's container.
+ *
+ * The network mode is read when a container is created and Docker cannot change it
+ * afterwards, so switching modes means replacing the container. What must survive is
+ * the project itself: same registry entry, same host work directory — only the
+ * container is new. The docker invocations are asserted through the fake's log,
+ * because the flags are the whole point of the operation.
+ */
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+import { afterEach, expect, test } from "vitest";
+import { writeContainerNetwork } from "../src/container-network.ts";
+import { addProject, listProjects, recreateProject } from "../src/projects.ts";
+import { installFakeDocker } from "./fake-docker.ts";
+
+const roots: string[] = [];
+const restores: Array<() => void> = [];
+
+afterEach(() => {
+	for (const restore of restores.splice(0)) restore();
+	for (const root of roots.splice(0)) rmSync(root, { recursive: true, force: true });
+});
+
+function setup(): { agentDir: string; logPath: string } {
+	const root = mkdtempSync(join(tmpdir(), "cy-recreate-"));
+	roots.push(root);
+	const agentDir = join(root, "agent");
+	mkdirSync(agentDir, { recursive: true });
+	const logPath = join(root, "docker.log");
+	restores.push(installFakeDocker(root, join(root, "projects", "demo"), logPath).restore);
+	return { agentDir, logPath };
+}
+
+function calls(logPath: string): string[] {
+	return readFileSync(logPath, "utf-8").trim().split("\n");
+}
+
+test("rebuilding replaces the gateway pair in dependency order and keeps the project", async () => {
+	const { agentDir, logPath } = setup();
+	const added = await addProject(agentDir, { name: "demo" });
+	expect(added.error).toBeUndefined();
+	const project = listProjects(agentDir).projects[0];
+	if (!project) throw new Error("项目未创建");
+	const sidecar = `cy-sb-${project.id.slice(0, 12)}`;
+	expect(calls(logPath).find((line) => line.startsWith("run") && line.includes(project.container))).toContain(
+		`--network container:${sidecar}`,
+	);
+
+	writeContainerNetwork(agentDir, "bridge");
+	const before = calls(logPath).length;
+	const recreated = await recreateProject(agentDir, project.id);
+	expect(recreated.error).toBeUndefined();
+	// The registry entry is untouched: id, name and work directory survive.
+	expect(recreated.project).toEqual(project);
+	expect(listProjects(agentDir).projects).toEqual([project]);
+
+	const lines = calls(logPath).slice(before);
+	const removeWork = lines.indexOf(`rm -f ${project.container}`);
+	const removeGateway = lines.indexOf(`rm -f ${sidecar}`);
+	const runGateway = lines.findIndex((line) => line.startsWith("run") && line.includes(`--name ${sidecar} `));
+	const runWork = lines.findIndex((line) => line.startsWith("run") && line.includes(`--name ${project.container} `));
+	expect(removeWork).toBeGreaterThanOrEqual(0);
+	expect(removeGateway).toBeGreaterThan(removeWork);
+	expect(runGateway).toBeGreaterThan(removeGateway);
+	expect(runWork).toBeGreaterThan(runGateway);
+	expect(lines[runGateway]).toContain("NET_ADMIN");
+	expect(lines[runWork]).not.toContain("NET_ADMIN");
+	expect(lines[runWork]).toContain(`-v ${project.workDir}:/work`);
+});
+
+test("an unknown project fails before docker is invoked", async () => {
+	const { agentDir, logPath } = setup();
+	const result = await recreateProject(agentDir, "not-a-project");
+	expect(result.error).toBe("项目不存在");
+	expect(existsSync(logPath)).toBe(false);
+});

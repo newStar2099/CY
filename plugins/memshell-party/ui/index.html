@@ -1,0 +1,78 @@
+<!doctype html>
+<html lang="zh-CN">
+	<head>
+		<meta charset="utf-8" />
+		<meta name="viewport" content="width=device-width, initial-scale=1" />
+		<title>MemShellParty 调用历史</title>
+		<link rel="stylesheet" href="./base.css" />
+		<link rel="stylesheet" href="./app.css" />
+	</head>
+	<body>
+		<div class="pui-page">
+			<div class="pui-bar">
+				<div>
+					<h1>调用历史</h1>
+					<p id="meta" class="pui-sub">正在连接控制台…</p>
+				</div>
+				<div class="pui-actions">
+					<span id="status" class="pui-pill">连接中</span>
+					<label class="pui-check">
+						<input id="auto" type="checkbox" checked />
+						自动刷新
+					</label>
+					<button id="refresh" class="pui-btn primary" type="button">刷新</button>
+				</div>
+			</div>
+
+			<section class="pui-card pui-card--flush">
+				<div class="pui-card-head">
+					<h2>最近调用</h2>
+					<span id="count" class="pui-sub"></span>
+				</div>
+				<div id="pager" class="msp-pager" hidden>
+					<span id="page-info" class="pui-sub"></span>
+					<div class="msp-pager__controls">
+						<button id="prev" class="pui-btn" type="button">上一页</button>
+						<button id="next" class="pui-btn" type="button">下一页</button>
+					</div>
+				</div>
+				<table id="table" class="pui-table">
+					<thead>
+						<tr>
+							<th>时间</th>
+							<th>工具</th>
+							<th>目标</th>
+							<th>结果</th>
+							<th class="num">耗时</th>
+							<th class="num">大小</th>
+							<th class="num">产物</th>
+						</tr>
+					</thead>
+					<tbody id="rows">
+						<tr><td colspan="7" class="pui-empty">正在读取…</td></tr>
+					</tbody>
+				</table>
+				<p id="empty" class="pui-empty" hidden>还没有调用记录。让 Agent 生成一次内存马后，这里会出现条目。</p>
+			</section>
+
+			<div id="detail-modal" class="msp-modal" hidden>
+				<div class="msp-modal__backdrop" id="detail-backdrop"></div>
+				<div class="msp-modal__panel" role="dialog" aria-modal="true" aria-labelledby="detail-heading">
+					<div class="msp-modal__head">
+						<h2 id="detail-heading">调用详情</h2>
+						<span id="detail-title" class="pui-sub"></span>
+						<button id="detail-close" class="pui-btn" type="button">关闭</button>
+					</div>
+					<pre id="detail" class="pui-output"></pre>
+				</div>
+			</div>
+
+			<p class="pui-hint">
+				参数里的密码、密钥与 class 字节码在历史里显示为 ***。载荷保存在插件产物目录，可在「插件 → 产物」里拉取。
+			</p>
+		</div>
+
+		<script src="./sdk.js"></script>
+		<script src="./app.js"></script>
+	</body>
+</html>

@@ -1,0 +1,78 @@
+# 长缨在手 console image (Web 控制台 + 服务端，非 Kali 工具镜像)。
+# 工具镜像见同目录 Dockerfile（Kali 基础，由控制台在「设置 → 环境」里构建）。
+#
+# Build (repo root as context):
+#   docker build -f docker/Dockerfile.console -t cy-console:<ver> .
+#
+# 国内构建源可用 --build-arg 覆盖（默认即国内镜像，HTTPS 防明文劫持）：
+#   --build-arg NPM_REGISTRY=https://registry.npmmirror.com
+#   --build-arg APT_MIRROR=https://mirrors.tuna.tsinghua.edu.cn/debian
+#
+# Run (控制台需要操作 Docker 来管理项目工作容器):
+#   docker run -d --name cy \
+#     -p 7777:7777 \
+#     -v /var/run/docker.sock:/var/run/docker.sock \
+#     -v /data:/data \
+#     cy-console:<ver> --no-gate
+#
+# 数据卷必须用「同路径绑定挂载」(/data:/data)，不能用 named volume：控制台会把
+# /data 下的代理 DNS 配置、项目目录等作为 bind 源传给宿主机守护进程去创建工作
+# 容器，守护进程按宿主机路径解析，named volume 的真实路径对不上会导致
+# "mount a directory onto a file" 一类的创建失败。
+#
+# 默认启用自签 HTTPS（--no-tls 可关闭）；数据（账号、证书、会话）都在 /data。
+
+# ---------- 构建阶段：整仓编译 ----------
+FROM node:22-bookworm AS build
+
+ARG NPM_REGISTRY=https://registry.npmmirror.com
+ENV NPM_CONFIG_REGISTRY=${NPM_REGISTRY} \
+	NPM_CONFIG_AUDIT=false \
+	NPM_CONFIG_FUND=false
+
+WORKDIR /repo
+COPY . .
+
+# 先装依赖再全量构建：根 build 依次编译 chord/tui/.../coding-agent，
+# 随后 packages/web 自行构建 webui（vite）、嵌入资源与 tsc 产物。
+# npm 缓存用 BuildKit cache mount，源码改动重跑时大部分包命中缓存。
+RUN --mount=type=cache,target=/root/.npm \
+	npm ci && npm run build && npm --prefix packages/web run build
+
+# ---------- 运行阶段 ----------
+FROM node:22-bookworm-slim
+
+# slim 镜像没有 CA 证书，HTTPS 镜像源会握手失败；先从构建阶段复制证书束，
+# 再用 HTTPS 清华源安装（本机 http 明文会被透明代理篡改，不能用 http 源）。
+COPY --from=build /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/ca-certificates.crt
+
+ARG APT_MIRROR=https://mirrors.tuna.tsinghua.edu.cn/debian
+# 注意：sources 里路径是 deb.debian.org/debian，整段替换避免拼出 /debian/debian。
+RUN if [ -n "$APT_MIRROR" ]; then \
+		sed -i "s|http://deb.debian.org/debian|${APT_MIRROR}|g" /etc/apt/sources.list.d/debian.sources 2>/dev/null || true; \
+	fi \
+	&& apt-get update \
+	&& apt-get install -y --no-install-recommends openssl ca-certificates git \
+	&& rm -rf /var/lib/apt/lists/*
+
+# 项目工作容器由宿主机 Docker 管理；只需 CLI，通过挂载 socket 使用。
+COPY --from=docker:cli /usr/local/bin/docker /usr/local/bin/docker
+
+COPY --from=build /repo /app
+
+# 默认管理员凭据（admin / admin@2026，仅存 scrypt 哈希）：全新 /data 首次启动时由
+# 入口脚本播种；已有 auth.json 时不会覆盖。
+COPY docker/cy-auth-default.json /opt/cy-default-auth.json
+COPY docker/cy-entrypoint.sh /usr/local/bin/cy-entrypoint
+RUN chmod +x /usr/local/bin/cy-entrypoint
+
+ENV HOME=/data \
+	CY_CWD=/data/projects
+RUN mkdir -p /data/projects
+
+WORKDIR /app
+EXPOSE 7777
+
+# 额外参数跟在镜像名后，例如 --no-gate / --tls-cert / --tls-key，
+# 会追加到 ENTRYPOINT 之后（docker run cy-console:1.1.0 --no-gate）。
+ENTRYPOINT ["/usr/local/bin/cy-entrypoint"]
