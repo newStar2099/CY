@@ -110,7 +110,7 @@ docker build -f docker/Dockerfile.console -t cy-console:1.1.0 .
 docker build -t cy:latest --build-arg APT_MIRROR=https://mirrors.tuna.tsinghua.edu.cn/kali docker/
 
 # 启动（compose）
-cd /root/fcss && docker compose up -d     # 配置见 .env：镜像/端口/数据目录/启动参数
+cd /root/cy && docker compose up -d     # 配置见 .env：镜像/端口/数据目录/启动参数
 ```
 
 - 访问 `https://<主机>:7777`（自签 HTTPS，`--no-tls` 可关闭；`--no-gate` 关闭随机入口令牌）
