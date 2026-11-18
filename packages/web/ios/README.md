@@ -46,8 +46,8 @@ scripts/build-repo.sh
 
 ```
 build/cybridged
-build/com.zgsfsec.cybridge_0.1.8_iphoneos-arm.deb
-build/com.zgsfsec.cybridge_0.1.8_iphoneos-arm64.deb
+build/com.cy.cybridge_0.1.8_iphoneos-arm.deb
+build/com.cy.cybridge_0.1.8_iphoneos-arm64.deb
 docs/repo/{Packages,Release,pool/*.deb}
 ```
 
@@ -57,7 +57,7 @@ docs/repo/{Packages,Release,pool/*.deb}
 
 推荐路径：
 
-1. Sileo 添加源 `https://zgsfsec.github.io/cy-ios-repo/`，安装 `CyBridge`。
+1. Sileo 添加源 `https://github.com/newStar2099/CY`，安装 `CyBridge`。
    新仓库 `cy-ios-repo` 的 Pages Source 选 `main` / root；发布内容就是仓库根，不要再加 `/repo/`。
 2. 控制台「iOS 设备」页创建 token，点「显示/复制」拿到 `ios_...`。
 3. iPhone Safari 打开 `http://127.0.0.1:9945/setup`。
@@ -98,9 +98,9 @@ packages/web/ios/scripts/install-ios.sh root@192.168.1.50 --with-deps \
 ## 故障排查
 
 - **控制台显示“反连被拒绝：token 无效或已删除”**：token 填错或被删；在控制台创建新 token 重新配对。
-- **Safari 打不开 setup 页**：确认 daemon 正在运行（`launchctl list | grep cy`）且没有旧配置；有旧配置时 daemon 直接反连，不会开 setup 页。重新配对先删配置并重启：`rm /var/jb/etc/cybridge.json && launchctl kickstart -k system/com.zgsfsec.cybridged`。
+- **Safari 打不开 setup 页**：确认 daemon 正在运行（`launchctl list | grep cy`）且没有旧配置；有旧配置时 daemon 直接反连，不会开 setup 页。重新配对先删配置并重启：`rm /var/jb/etc/cybridge.json && launchctl kickstart -k system/com.cy.cybridged`。
 - **设备在线但工具报“设备无响应”**：45s 没有心跳，通常是 iOS 挂起了进程；重开 daemon。
-- **`daemon 不是 root`**：检查 plist 的 `UserName` 与 `launchctl print system/com.zgsfsec.cybridged`。
+- **`daemon 不是 root`**：检查 plist 的 `UserName` 与 `launchctl print system/com.cy.cybridged`。
 - **TLS pin mismatch**：日志会打印实际叶证书指纹；确认反向代理没有换成另一张证书。
 
 ## 安全边界

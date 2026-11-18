@@ -1,8 +1,8 @@
 #!/bin/sh
 set -e
 
-LABEL="com.zgsfsec.cybridged"
-WATCH_LABEL="com.zgsfsec.cybridgewatchdog"
+LABEL="com.cy.cybridged"
+WATCH_LABEL="com.cy.cybridgewatchdog"
 PLIST="@PLIST@"
 WATCH_PLIST="@WATCH_PLIST@"
 CONFIG="@CONFIG@"

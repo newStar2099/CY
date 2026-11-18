@@ -5,7 +5,7 @@ export PATH
 # launchd KeepAlive only handles exits; a suspended process keeps its socket
 # open and never reconnects, so this separate job detects the stall and kicks
 # the main LaunchDaemon.
-LABEL="com.zgsfsec.cybridged"
+LABEL="com.cy.cybridged"
 HEARTBEAT="@HEARTBEAT@"
 
 LAUNCHCTL="$(command -v launchctl 2>/dev/null || true)"

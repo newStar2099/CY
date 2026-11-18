@@ -46,7 +46,7 @@ do {
 // The watchdog LaunchDaemon uses this file to distinguish a live control loop
 // from a suspended process whose socket is still open.
 let heartbeatPath = setupContext.stateDir + "/watchdog-heartbeat"
-let heartbeatTimer = DispatchSource.makeTimerSource(queue: DispatchQueue(label: "com.zgsfsec.cybridge.heartbeat"))
+let heartbeatTimer = DispatchSource.makeTimerSource(queue: DispatchQueue(label: "com.cy.cybridge.heartbeat"))
 heartbeatTimer.schedule(deadline: .now(), repeating: 5)
 heartbeatTimer.setEventHandler {
 	let value = "\(Date().timeIntervalSince1970)\n"

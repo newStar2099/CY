@@ -21,8 +21,8 @@ final class GatewayClient: NSObject, URLSessionWebSocketDelegate, URLSessionTask
 	private let config: BridgeConfig
 	private let deviceId: String
 	private let operations = DeviceOperations()
-	private let ioQueue = DispatchQueue(label: "com.zgsfsec.cybridge.io")
-	private let stateQueue = DispatchQueue(label: "com.zgsfsec.cybridge.state")
+	private let ioQueue = DispatchQueue(label: "com.cy.cybridge.io")
+	private let stateQueue = DispatchQueue(label: "com.cy.cybridge.state")
 
 	private var session: URLSession?
 	private var task: URLSessionWebSocketTask?

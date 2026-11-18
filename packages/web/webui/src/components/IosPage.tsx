@@ -18,7 +18,7 @@ import { Page } from "../ui/Page.tsx";
 
 const { Text } = Typography;
 
-const SILEO_REPO = "https://zgsfsec.github.io/cy-ios-repo/";
+const SILEO_REPO = "https://github.com/newStar2099/CY";
 
 function formatTime(iso: string | null): string {
 	if (!iso) return "—";

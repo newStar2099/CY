@@ -15,8 +15,8 @@ cd "$ROOT"
 VERSION="${VERSION:-0.1.8}"
 BIN="${BIN:-$ROOT/build/cybridged}"
 OUT="${OUT:-$ROOT/build}"
-LABEL="com.zgsfsec.cybridged"
-WATCH_LABEL="com.zgsfsec.cybridgewatchdog"
+LABEL="com.cy.cybridged"
+WATCH_LABEL="com.cy.cybridgewatchdog"
 
 if [ ! -f "$BIN" ]; then
 	echo "error: 找不到 $BIN；先运行 scripts/build-ios.sh" >&2
@@ -96,7 +96,7 @@ for FORM in "${FORMS[@]}"; do
 
 	SIZE="$(du -sk "$STAGE" | awk '{print $1}')"
 	cat > "$STAGE/DEBIAN/control" <<CONTROL
-Package: com.zgsfsec.cybridge
+Package: com.cy.cybridge
 Name: CyBridge
 Version: $VERSION
 Architecture: $ARCH
@@ -109,7 +109,7 @@ Depends: firmware (>= $MIN)
 Installed-Size: $SIZE
 CONTROL
 
-	DEB="$OUT/com.zgsfsec.cybridge_${VERSION}_${ARCH}.deb"
+	DEB="$OUT/com.cy.cybridge_${VERSION}_${ARCH}.deb"
 	if [ "$PACKER" = "dpkg-deb" ]; then
 		if ! dpkg-deb --root-owner-group -b "$STAGE" "$DEB" 2>/dev/null; then
 			dpkg-deb -b "$STAGE" "$DEB"

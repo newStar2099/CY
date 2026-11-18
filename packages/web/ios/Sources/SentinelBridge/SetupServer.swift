@@ -21,7 +21,7 @@ struct ConsoleTarget {
 final class SetupServer {
 	private let context: BridgeSetupContext
 	private let controller: BridgeController
-	private let queue = DispatchQueue(label: "com.zgsfsec.cybridge.setup")
+	private let queue = DispatchQueue(label: "com.cy.cybridge.setup")
 	private var listener: NWListener?
 	private var attempts = 0
 	private var lockedUntil = Date.distantPast

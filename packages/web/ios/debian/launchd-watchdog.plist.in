@@ -3,7 +3,7 @@
 <plist version="1.0">
 <dict>
 	<key>Label</key>
-	<string>com.zgsfsec.cybridgewatchdog</string>
+	<string>com.cy.cybridgewatchdog</string>
 	<key>ProgramArguments</key>
 	<array>
 		<string>@WATCHDOG@</string>

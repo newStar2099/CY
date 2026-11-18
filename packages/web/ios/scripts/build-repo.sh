@@ -10,7 +10,7 @@
 #   docs/repo/pool/*.deb
 #
 # Sileo source URL after Pages deploys:
-#   https://zgsfsec.github.io/cy-ios-repo/
+#   https://github.com/newStar2099/CY
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
@@ -56,7 +56,7 @@ rm -f "$OUT/Packages" "$OUT/Packages.gz" "$OUT/Release"
 
 found=0
 for arch_glob in iphoneos-arm64 iphoneos-arm; do
-	for deb in "$ROOT/build/com.zgsfsec.cybridge_${VERSION}_${arch_glob}.deb"; do
+	for deb in "$ROOT/build/com.cy.cybridge_${VERSION}_${arch_glob}.deb"; do
 		[ -f "$deb" ] || continue
 		found=1
 		name="$(basename "$deb")"
@@ -68,7 +68,7 @@ for arch_glob in iphoneos-arm64 iphoneos-arm; do
 		md5="$(hash_of md5 "$deb")"
 		if [ "$arch_glob" = "iphoneos-arm64" ]; then min="15.0"; else min="14.0"; fi
 		cat >>"$OUT/Packages" <<CONTROL
-Package: com.zgsfsec.cybridge
+Package: com.cy.cybridge
 Name: CyBridge
 Version: $VERSION
 Architecture: $arch_glob
@@ -89,7 +89,7 @@ CONTROL
 	done
 done
 if [ "$found" = "0" ]; then
-	echo "error: 没有找到 $ROOT/build/com.zgsfsec.cybridge_${VERSION}_*.deb；先运行 --build" >&2
+	echo "error: 没有找到 $ROOT/build/com.cy.cybridge_${VERSION}_*.deb；先运行 --build" >&2
 	exit 1
 fi
 
@@ -130,11 +130,11 @@ cat >"$OUT/index.html" <<HTML
 <h1>Full Chain Cy iOS repo</h1>
 <p>Sileo 添加源：<code>$(python3 - <<'PY'
 import os
-print(os.environ.get("SILEO_URL", "https://zgsfsec.github.io/cy-ios-repo/"))
+print(os.environ.get("SILEO_URL", "https://github.com/newStar2099/CY"))
 PY
 )</code></p>
 <p>包目录：<a href="Packages">Packages</a></p>
 HTML
 
 echo "repo written to $OUT"
-echo "Sileo source: ${SILEO_URL:-https://zgsfsec.github.io/cy-ios-repo/}"
+echo "Sileo source: ${SILEO_URL:-https://github.com/newStar2099/CY}"

@@ -1,0 +1,18 @@
+Origin: Changying
+Label: Changying CyBridge
+Suite: stable
+Version: 1.0
+Codename: ios
+Architectures: iphoneos-arm iphoneos-arm64
+Components: main
+Description: CyBridge packages for Changying console
+Date: Wed, 18 Nov 2026 08:03:58 +0000
+MD5Sum:
+ 11021d2ff501eceee0872c1fdc125029 1055 Packages
+ 64c5a359a6db7ed8ca6e74c0162217ce 502 Packages.gz
+SHA1:
+ d1485ba447e570137184baf3020964f78d438a29 1055 Packages
+ ea48b18294d05f02950566cbffd0d2559cf978c2 502 Packages.gz
+SHA256:
+ 1d8a5770e2abc453289fc57d2185edf84ad33763a9c73e15dbec34d12f17a71d 1055 Packages
+ 3dd037d5c0fdcef16eca372d3492f0ac0053f9f32da629774a6cc3072a4b6b54 502 Packages.gz

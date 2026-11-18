@@ -107,13 +107,13 @@ ensure_artifact() {
 		echo "设备布局：$ARCH"
 	fi
 	if [ "$ARCH" = "rootless" ]; then
-		DEB="$ROOT/build/com.zgsfsec.cybridge_${VERSION}_iphoneos-arm64.deb"
+		DEB="$ROOT/build/com.cy.cybridge_${VERSION}_iphoneos-arm64.deb"
 		CONFIG="/var/jb/etc/cybridge.json"
-		PLIST="/var/jb/Library/LaunchDaemons/com.zgsfsec.cybridged.plist"
+		PLIST="/var/jb/Library/LaunchDaemons/com.cy.cybridged.plist"
 	else
-		DEB="$ROOT/build/com.zgsfsec.cybridge_${VERSION}_iphoneos-arm.deb"
+		DEB="$ROOT/build/com.cy.cybridge_${VERSION}_iphoneos-arm.deb"
 		CONFIG="/etc/cybridge.json"
-		PLIST="/Library/LaunchDaemons/com.zgsfsec.cybridged.plist"
+		PLIST="/Library/LaunchDaemons/com.cy.cybridged.plist"
 	fi
 	if [ ! -f "$DEB" ]; then
 		echo "error: 找不到 $DEB；先运行 scripts/build-ios.sh 与 scripts/build-deb.sh" >&2
@@ -148,7 +148,7 @@ if [ -n "$URL" ] && [ -n "$TOKEN" ]; then
 fi
 
 echo "启动 LaunchDaemon"
-run "launchctl bootout system/com.zgsfsec.cybridged 2>/dev/null; launchctl bootstrap system '$PLIST' 2>/dev/null || launchctl load -w '$PLIST' 2>/dev/null; sleep 1; launchctl list | grep cybridge || true; tail -5 /var/log/cybridge.log 2>/dev/null || true"
+run "launchctl bootout system/com.cy.cybridged 2>/dev/null; launchctl bootstrap system '$PLIST' 2>/dev/null || launchctl load -w '$PLIST' 2>/dev/null; sleep 1; launchctl list | grep cybridge || true; tail -5 /var/log/cybridge.log 2>/dev/null || true"
 
 if [ "$WITH_DEPS" = "1" ]; then
 	echo "安装可选依赖（tcpdump / appinst，失败不阻塞）"

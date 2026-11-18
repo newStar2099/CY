@@ -11,7 +11,7 @@ import Foundation
 
 final class BridgeController {
 	private let context: BridgeSetupContext
-	private let queue = DispatchQueue(label: "com.zgsfsec.cybridge.control")
+	private let queue = DispatchQueue(label: "com.cy.cybridge.control")
 	private let lock = NSLock()
 	private var client: GatewayClient?
 	private var generation = 0
