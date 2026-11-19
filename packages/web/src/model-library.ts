@@ -19,14 +19,14 @@ import { chmodSync, existsSync, mkdirSync, readFileSync, writeFileSync } from "n
 import { dirname } from "node:path";
 import { t } from "./i18n.ts";
 import {
+	CY_COMMANDER_PROVIDER_ID,
+	CY_JUDGE_PROVIDER_ID,
+	CY_PROVIDER_ID,
 	DEFAULT_MODEL_API,
 	NO_AUTH_PLACEHOLDER_KEY,
 	readProviderModelConfig,
 	readProviderThinkingSettings,
 	removeProviderModelConfig,
-	CY_COMMANDER_PROVIDER_ID,
-	CY_JUDGE_PROVIDER_ID,
-	CY_PROVIDER_ID,
 	writeProviderModelConfig,
 } from "./model-config.ts";
 import { isModelThinkingLevel } from "./model-thinking.ts";
@@ -524,11 +524,7 @@ export function removeLibraryEntry(agentDir: string, id: string): void {
 }
 
 /** Point a role at an entry, or at `main` for judge/reviewer. */
-export function setLibraryRole(
-	agentDir: string,
-	role: CyModelRoleName,
-	target: string | null,
-): CyModelLibrary {
+export function setLibraryRole(agentDir: string, role: CyModelRoleName, target: string | null): CyModelLibrary {
 	const library = readModelLibrary(agentDir);
 	if (role === "main") {
 		if (target === null) {

@@ -370,9 +370,7 @@ export function pluginAllowed(map: CyPluginPermissionMap, key: string): boolean 
 }
 
 /** The same subset rule as the tool switches, applied per plugin key. */
-export function effectiveSubagentPlugins(
-	config: Pick<CyPermissionsConfig, "plugins">,
-): CyPluginPermissionMap {
+export function effectiveSubagentPlugins(config: Pick<CyPermissionsConfig, "plugins">): CyPluginPermissionMap {
 	const merged: CyPluginPermissionMap = {};
 	const keys = new Set([...Object.keys(config.plugins.main), ...Object.keys(config.plugins.subagent)]);
 	for (const key of keys) {

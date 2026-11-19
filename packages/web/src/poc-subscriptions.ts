@@ -26,12 +26,7 @@ import { dirname, join } from "node:path";
 import { t } from "./i18n.ts";
 import { createPocSubscriptionDownload } from "./poc-subscription-network.ts";
 import type { PocStore } from "./pocs.ts";
-import type {
-	CyPocImportOutcome,
-	CyPocSource,
-	CyPocSourceSave,
-	CyPocSyncRecord,
-} from "./protocol.ts";
+import type { CyPocImportOutcome, CyPocSource, CyPocSourceSave, CyPocSyncRecord } from "./protocol.ts";
 
 /** Attempts per sync: the initial try plus one retry on a network error. */
 const FETCH_ATTEMPTS = 2;

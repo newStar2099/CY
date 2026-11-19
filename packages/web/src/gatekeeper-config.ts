@@ -13,12 +13,7 @@
 
 import { chmodSync, existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname } from "node:path";
-import {
-	CY_MODES,
-	type CyGatekeeperConfig,
-	type CyMcpToolGate,
-	type CyMode,
-} from "./protocol.ts";
+import { CY_MODES, type CyGatekeeperConfig, type CyMcpToolGate, type CyMode } from "./protocol.ts";
 
 /** One judgment may take this long before it counts as a failure. */
 export const DEFAULT_TIMEOUT_MS = 15_000;

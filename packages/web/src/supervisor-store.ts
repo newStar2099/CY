@@ -226,9 +226,7 @@ function auditItem(row: SessionRow): CySupervisorAuditItem {
 		callCount: row.call_count,
 		phase: row.phase,
 		intent: row.intent,
-		progress: (["advancing", "stalled", "looping", "unknown"] as const).includes(
-			row.progress as CySupervisorProgress,
-		)
+		progress: (["advancing", "stalled", "looping", "unknown"] as const).includes(row.progress as CySupervisorProgress)
 			? (row.progress as CySupervisorProgress)
 			: "unknown",
 		adviceCount: row.advice_count,

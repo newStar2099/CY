@@ -331,9 +331,6 @@ function assetSearchTool(platform: CyAssetPlatform, context: AssetToolContext): 
 }
 
 /** The tools for the platforms the caller decided are usable, in a fixed order. */
-export function createAssetTools(
-	platforms: readonly CyAssetPlatform[],
-	context: AssetToolContext,
-): ToolDefinition[] {
+export function createAssetTools(platforms: readonly CyAssetPlatform[], context: AssetToolContext): ToolDefinition[] {
 	return platforms.map((platform) => assetSearchTool(platform, context));
 }

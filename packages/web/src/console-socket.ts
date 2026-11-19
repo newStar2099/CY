@@ -13,9 +13,7 @@ function writable(socket: ConsoleSocket): boolean {
 	if (socket.bufferedAmount <= MAX_CONSOLE_BUFFER_BYTES) return true;
 	// Terminate releases queued frames immediately. The console reconnects and
 	// reloads persisted state instead of retaining an unbounded send backlog.
-	console.warn(
-		`[cy-ws] disconnect: send backlog ${socket.bufferedAmount} bytes exceeds ${MAX_CONSOLE_BUFFER_BYTES}`,
-	);
+	console.warn(`[cy-ws] disconnect: send backlog ${socket.bufferedAmount} bytes exceeds ${MAX_CONSOLE_BUFFER_BYTES}`);
 	socket.terminate();
 	return false;
 }

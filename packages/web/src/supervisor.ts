@@ -190,10 +190,7 @@ function uniqueStrings(previous: string[], next: string[], limit: number): strin
 	return output.slice(-limit);
 }
 
-function mergeTested(
-	previous: CySupervisorTested[],
-	next: CySupervisorTested[],
-): CySupervisorTested[] {
+function mergeTested(previous: CySupervisorTested[], next: CySupervisorTested[]): CySupervisorTested[] {
 	const output = [...previous];
 	for (const entry of next) {
 		const key = `${entry.target}\n${entry.test}`;

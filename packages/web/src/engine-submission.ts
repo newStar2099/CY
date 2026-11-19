@@ -22,11 +22,7 @@ export function submissionInputPath(project: CyProjectInfo, engineId: string): s
 	return join(project.cwd, ".cy", "engine-inputs", engineId, "input.json");
 }
 
-export function prepareSubmissionInput(
-	project: CyProjectInfo,
-	engineId: string,
-	submission: EngineSubmission,
-): void {
+export function prepareSubmissionInput(project: CyProjectInfo, engineId: string, submission: EngineSubmission): void {
 	const path = submissionInputPath(project, engineId);
 	mkdirSync(dirname(path), { recursive: true });
 	writeFileSync(path, `${JSON.stringify(submission.data, null, 2)}\n`, { mode: 0o600 });

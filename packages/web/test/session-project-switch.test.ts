@@ -51,10 +51,7 @@ function dispatch(message: CyServerMessage): void {
 	incoming.push(message);
 }
 
-function waitFor(
-	predicate: (message: CyServerMessage) => boolean,
-	timeoutMs = 20000,
-): Promise<CyServerMessage> {
+function waitFor(predicate: (message: CyServerMessage) => boolean, timeoutMs = 20000): Promise<CyServerMessage> {
 	const buffered = incoming.findIndex(predicate);
 	if (buffered >= 0) {
 		const [message] = incoming.splice(buffered, 1);
@@ -81,10 +78,7 @@ function send(message: CyClientMessage): void {
 	ws?.send(JSON.stringify(message));
 }
 
-function snapshotWhere(
-	predicate: (snapshot: CyStateSnapshot) => boolean,
-	timeoutMs = 20000,
-): Promise<CyStateSnapshot> {
+function snapshotWhere(predicate: (snapshot: CyStateSnapshot) => boolean, timeoutMs = 20000): Promise<CyStateSnapshot> {
 	return waitFor((message) => message.type === "snapshot" && predicate(message.snapshot), timeoutMs).then(
 		(message) => (message as { snapshot: CyStateSnapshot }).snapshot,
 	);

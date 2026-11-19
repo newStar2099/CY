@@ -829,10 +829,7 @@ function dispatch(message: CyServerMessage): void {
 	incoming.push(message);
 }
 
-function waitFor(
-	predicate: (message: CyServerMessage) => boolean,
-	timeoutMs = 30000,
-): Promise<CyServerMessage> {
+function waitFor(predicate: (message: CyServerMessage) => boolean, timeoutMs = 30000): Promise<CyServerMessage> {
 	const index = incoming.findIndex(predicate);
 	if (index >= 0) {
 		const [message] = incoming.splice(index, 1);
@@ -1655,9 +1652,7 @@ test("a finished run notifies the DingTalk group, and the composer flag can forc
 	});
 	const saved = await waitFor((message) => message.type === "notify_config");
 	expect((saved as { config: CyNotifyConfig }).config).toMatchObject({
-		groups: [
-			{ enabled: true, kinds: { vulns: true, codeIntel: false }, targets: [{ keyword: "Full Chain Cy" }] },
-		],
+		groups: [{ enabled: true, kinds: { vulns: true, codeIntel: false }, targets: [{ keyword: "Full Chain Cy" }] }],
 	});
 
 	// One ordinary run. The send is fire-and-forget, so wait on the robot.
@@ -2325,10 +2320,7 @@ test("a compaction that stalls is visible, refuses prompts in Chinese, and can b
  * the loser lives until its timeout — would swallow the message this test is
  * waiting for. Registering first makes this test's own predicate win.
  */
-function waitForFirst(
-	predicate: (message: CyServerMessage) => boolean,
-	timeoutMs = 30000,
-): Promise<CyServerMessage> {
+function waitForFirst(predicate: (message: CyServerMessage) => boolean, timeoutMs = 30000): Promise<CyServerMessage> {
 	const queued = waitFor(predicate, timeoutMs);
 	const own = waiters[waiters.length - 1];
 	if (own && own.predicate === predicate) {

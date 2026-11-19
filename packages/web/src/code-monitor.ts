@@ -112,11 +112,7 @@ export interface CodeMonitorHooks {
 	/** Start the container if it is not running; false means it cannot run. */
 	ensureContainer(project: CyProjectInfo): Promise<boolean>;
 	/** Create the engineering run for one confirmed finding; returns its id. */
-	createEngine(
-		monitor: CyCodeMonitor,
-		commit: CyCodeCommit,
-		source: CodeMonitorEngineSource,
-	): Promise<string>;
+	createEngine(monitor: CyCodeMonitor, commit: CyCodeCommit, source: CodeMonitorEngineSource): Promise<string>;
 	/** Current engineering state, including persisted runs after a restart. */
 	engineStatus?(engineId: string): CyEngineStatus | null;
 	/** Push the finding to the operator's enabled chat channels. */
@@ -983,10 +979,7 @@ export class CodeMonitorManager {
 		return this.detail(row.monitorId);
 	}
 
-	private async retry(
-		monitorId: string,
-		row: CyCodeCommit,
-	): Promise<"security" | "not_security" | "failed" | null> {
+	private async retry(monitorId: string, row: CyCodeCommit): Promise<"security" | "not_security" | "failed" | null> {
 		const monitor = this.store.getMonitor(monitorId);
 		if (!monitor) return null;
 		const client = new GithubClient(

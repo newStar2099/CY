@@ -131,6 +131,7 @@ import { createIosFridaTools, IOS_FRIDA_TOOL_NAMES } from "./ios-frida-tool.ts";
 import type { IosGateway } from "./ios-gateway.ts";
 import { createIosTools, IOS_TOOL_NAMES, type IosToolContext } from "./ios-tool.ts";
 import {
+	type CyMcpServerRecord,
 	loadCyMcpConfig,
 	mcpConfigView,
 	mcpEntryFor,
@@ -138,7 +139,6 @@ import {
 	readMcpServers,
 	recordMcpStatus,
 	deleteMcpServer as removeMcpServer,
-	type CyMcpServerRecord,
 	updateMcpServerRecord,
 	validateMcpServerInput,
 	saveMcpServer as writeMcpServer,
@@ -190,16 +190,16 @@ import {
 } from "./notify.ts";
 import { readNotifyConfig, writeNotifyConfig } from "./notify-config.ts";
 import {
+	type CyPermissionPreset,
+	type CyPermissionSet,
+	type CyPermissionsConfig,
+	type CyPluginPermissionMap,
 	effectiveSubagent,
 	effectiveSubagentPlugins,
 	excludeToolsFor,
 	PERMISSION_PRESETS,
 	pluginAllowed,
 	readPermissionsConfig,
-	type CyPermissionPreset,
-	type CyPermissionSet,
-	type CyPermissionsConfig,
-	type CyPluginPermissionMap,
 	writePermissionsConfig,
 } from "./permissions.ts";
 import { appendPluginAudit } from "./plugin-audit.ts";
@@ -208,7 +208,7 @@ import { PocSubscriptions } from "./poc-subscriptions.ts";
 import { createPocTools } from "./poc-tool.ts";
 import { LIST_CAP, type PocImportOptions, PocStore, pocsDbPath } from "./pocs.ts";
 import { ensureBuiltinPresets, findPreset, readPresetText } from "./presets.ts";
-import { ensureProjectReady, listProjects, renameProject, type CyProject } from "./projects.ts";
+import { type CyProject, ensureProjectReady, listProjects, renameProject } from "./projects.ts";
 import type {
 	CyApiModel,
 	CyApiModelEvent,
@@ -305,10 +305,10 @@ import { readSessionIos, SESSION_IOS_CUSTOM_TYPE } from "./session-ios.ts";
 import { readSessionMode, SESSION_MODE_CUSTOM_TYPE } from "./session-mode.ts";
 import { readSessionPreset, SESSION_PRESET_CUSTOM_TYPE } from "./session-preset.ts";
 import {
-	readSessionStatus,
-	SESSION_STATUS_CUSTOM_TYPE,
 	type CySessionListEntry,
 	type CySessionStatus,
+	readSessionStatus,
+	SESSION_STATUS_CUSTOM_TYPE,
 	withSessionStatus,
 } from "./session-status.ts";
 import { createSessionTitleTool } from "./session-title-tool.ts";
@@ -323,6 +323,7 @@ import { SupervisorStore, supervisorDbPath } from "./supervisor-store.ts";
 import { createToolAuditExtension } from "./tool-audit.ts";
 import { createToolGateExtension, type ToolGateContext } from "./tool-gate.ts";
 import { createToolWorkflowExtension } from "./tool-workflow.ts";
+import { TOOLBOX_BRIEFING } from "./toolbox-prompt.ts";
 import { branchTranscript, branchUserMessages, messageText, withSystemPrompt } from "./transcript.ts";
 import { createVulnerabilityTools, evidencePathsToContainer } from "./vuln-tool.ts";
 import { emptyVulnStats, VulnerabilityStore, vulnerabilityDbPath } from "./vulnerabilities.ts";
@@ -832,7 +833,11 @@ export class CyRuntime {
 			cwd,
 			agentDir: this.agentDir,
 			extensionFactories,
-			...(appendSystemPrompt ? { appendSystemPrompt } : {}),
+			// The toolbox briefing is appended after the identity/preset texts:
+			// every session (main or sub-agent) runs bash in the same toolbox
+			// container, so all of them get the tier-2 inventory up front instead
+			// of discovering nuclei & friends by trial and error.
+			appendSystemPrompt: [...(appendSystemPrompt ?? []), TOOLBOX_BRIEFING],
 		});
 		await resourceLoader.reload();
 		const settingsManager = SettingsManager.create(cwd, this.agentDir);
@@ -2365,11 +2370,7 @@ export class CyRuntime {
 	 * so the sessions are rebuilt — unless one is running, in which case the
 	 * change lands on the next rebuild instead of interrupting work.
 	 */
-	async testAssetPlatform(
-		platform: CyAssetPlatform,
-		key?: string,
-		baseUrl?: string,
-	): Promise<CyTestResult> {
+	async testAssetPlatform(platform: CyAssetPlatform, key?: string, baseUrl?: string): Promise<CyTestResult> {
 		const before = usablePlatforms(this.agentDir).join(",");
 		const result = await this.probeAssetPlatform(platform, key, baseUrl);
 		if (usablePlatforms(this.agentDir).join(",") !== before) {
@@ -2384,11 +2385,7 @@ export class CyRuntime {
 	 * as a failure: an unreachable platform is exactly what the settings screen
 	 * has to show.
 	 */
-	private async probeAssetPlatform(
-		platform: CyAssetPlatform,
-		key?: string,
-		baseUrl?: string,
-	): Promise<CyTestResult> {
+	private async probeAssetPlatform(platform: CyAssetPlatform, key?: string, baseUrl?: string): Promise<CyTestResult> {
 		const entry = readAssetConfig(this.agentDir).platforms[platform];
 		const effective = key?.trim() ? key.trim() : entry.key;
 		if (!effective) {
@@ -2684,11 +2681,7 @@ export class CyRuntime {
 	}
 
 	/** Update config values, redeploy, and rebuild so the new env reaches the tools. */
-	async setPluginConfig(
-		hostId: string,
-		pluginId: string,
-		values: Record<string, string>,
-	): Promise<CyPluginsView> {
+	async setPluginConfig(hostId: string, pluginId: string, values: Record<string, string>): Promise<CyPluginsView> {
 		this.assertNoRunningSession(t("插件配置"));
 		await pluginService.updatePluginConfig(this.agentDir, hostId, pluginId, values);
 		await this.rebuildSessions();

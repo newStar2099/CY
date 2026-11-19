@@ -61,10 +61,7 @@ function dispatch(message: CyServerMessage): void {
 	incoming.push(message);
 }
 
-function waitFor(
-	predicate: (message: CyServerMessage) => boolean,
-	timeoutMs = 20000,
-): Promise<CyServerMessage> {
+function waitFor(predicate: (message: CyServerMessage) => boolean, timeoutMs = 20000): Promise<CyServerMessage> {
 	const buffered = incoming.findIndex(predicate);
 	if (buffered >= 0) {
 		const [message] = incoming.splice(buffered, 1);

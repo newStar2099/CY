@@ -15,7 +15,7 @@ import { createHash } from "node:crypto";
 import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { dirname, join, resolve, sep } from "node:path";
 import { t } from "../i18n.ts";
-import { parsePluginManifest, type CyPluginManifest } from "../plugin-manifest.ts";
+import { type CyPluginManifest, parsePluginManifest } from "../plugin-manifest.ts";
 import { readZip } from "../poc-zip.ts";
 
 /** The console caps uploads at 8 MB; the host allows some base64 overhead. */

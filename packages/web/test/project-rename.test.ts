@@ -3,7 +3,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, beforeEach, expect, test } from "vitest";
 import { withGatewayLock } from "../src/gateway.ts";
-import { addProject, listProjects, renameProject, type CyProject } from "../src/projects.ts";
+import { addProject, type CyProject, listProjects, renameProject } from "../src/projects.ts";
 import { installFakeDocker } from "./fake-docker.ts";
 
 let root: string;

@@ -390,9 +390,7 @@ describe("plugin host API", () => {
 			headers: { "content-type": "application/json" },
 			body: installBody(manifest({ version: "0.1.0" })),
 		});
-		const removalsBefore = dockerState.calls.filter(
-			(call) => call === "rm -f cy-plugin-com-example-recon",
-		).length;
+		const removalsBefore = dockerState.calls.filter((call) => call === "rm -f cy-plugin-com-example-recon").length;
 		if (plugin) plugin.state.failHealth = true;
 		const upgrade = await api("/v1/plugins", {
 			method: "POST",

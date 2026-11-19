@@ -291,9 +291,7 @@ export function usageRemaining(usage: TavilyKeyUsage): number | null {
 }
 
 /** Probe one key: does it work, and what does the account have left. */
-export async function probeTavilyKey(
-	options: TavilyUsageOptions,
-): Promise<CyTestResult & { usage?: TavilyKeyUsage }> {
+export async function probeTavilyKey(options: TavilyUsageOptions): Promise<CyTestResult & { usage?: TavilyKeyUsage }> {
 	const usage = await tavilyUsage(options);
 	const left = usageRemaining(usage);
 	const quota = `${t("套餐 {plan} · 本套餐已用 {used}", { plan: usage.plan, used: usage.planUsed })}${

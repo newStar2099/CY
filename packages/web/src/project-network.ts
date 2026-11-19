@@ -1,10 +1,10 @@
 /** Resolve and verify the network a host-side request borrows from a project. */
 import {
+	type CyProject,
 	ensureProjectReady,
 	listProjects,
 	projectProxySettings,
 	projectSidecarName,
-	type CyProject,
 } from "./projects.ts";
 import { projectOpenVpnConfigPath, projectProxyConfigPath, projectWireGuardConfigPath, proxyEnabled } from "./proxy.ts";
 import { checkSidecar } from "./singbox.ts";

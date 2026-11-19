@@ -9,7 +9,7 @@
 
 import { basename } from "node:path";
 import { t } from "./i18n.ts";
-import { parsePluginManifest, type CyPluginManifest } from "./plugin-manifest.ts";
+import { type CyPluginManifest, parsePluginManifest } from "./plugin-manifest.ts";
 import { readZip } from "./poc-zip.ts";
 
 /** The zip is held in memory while it is read; a manifest package is kilobytes. */

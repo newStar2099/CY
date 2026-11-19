@@ -125,9 +125,7 @@ test("replaydPorts is deterministic, in range, and spreads across containers", (
 	expect(a.proxyPort).toBe(a.port + 300);
 	// A retry moves to the next candidate instead of reusing a taken port.
 	expect(replaydPorts("cy-aaaaaaaaaaaa", 1).port).toBe(a.port + 1);
-	const ports = new Set(
-		["cy-1", "cy-2", "cy-3", "cy-4", "cy-5"].map((name) => replaydPorts(name).port),
-	);
+	const ports = new Set(["cy-1", "cy-2", "cy-3", "cy-4", "cy-5"].map((name) => replaydPorts(name).port));
 	expect(ports.size).toBeGreaterThan(1);
 });
 

@@ -635,10 +635,7 @@ export function setProxyImage(agentDir: string, image: string): ProxiesFile {
  * The image never comes from a profile: it is one thing to keep up to date on a
  * machine, not one per node.
  */
-export function resolveProjectProxy(
-	agentDir: string,
-	proxyId: string | null | undefined,
-): CyProxySettings | null {
+export function resolveProjectProxy(agentDir: string, proxyId: string | null | undefined): CyProxySettings | null {
 	const file = readProxies(agentDir);
 	const wanted = proxyId === undefined ? file.defaultId : proxyId;
 	if (wanted === NO_PROXY) return null;
@@ -689,9 +686,7 @@ interface Outbound {
  * bind address) to mean anything. The route goes through the one tagged `proxy`,
  * or through the last one when none is; a tag the operator chose is kept.
  */
-export function proxyOutbounds(
-	settings: CyProxySettings,
-): { outbounds: Outbound[]; tag: string } | { error: string } {
+export function proxyOutbounds(settings: CyProxySettings): { outbounds: Outbound[]; tag: string } | { error: string } {
 	if (settings.mode === "wireguard") {
 		return { error: t("WireGuard 档案不走 sing-box，不能生成出站配置") };
 	}

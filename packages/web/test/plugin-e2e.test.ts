@@ -212,10 +212,7 @@ function dispatch(message: CyServerMessage): void {
 	}
 }
 
-function waitFor(
-	predicate: (message: CyServerMessage) => boolean,
-	timeoutMs = 20000,
-): Promise<CyServerMessage> {
+function waitFor(predicate: (message: CyServerMessage) => boolean, timeoutMs = 20000): Promise<CyServerMessage> {
 	const already = incoming.find(predicate);
 	if (already) return Promise.resolve(already);
 	return new Promise((resolve, reject) => {

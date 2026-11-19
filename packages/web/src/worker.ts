@@ -35,13 +35,7 @@ import {
 } from "./goal.ts";
 import type { GoalPort } from "./goal-tool.ts";
 import { t } from "./i18n.ts";
-import type {
-	CyEngineEvent,
-	CyEngineTask,
-	CyEngineTaskContinue,
-	CyGoal,
-	CyGoalUsage,
-} from "./protocol.ts";
+import type { CyEngineEvent, CyEngineTask, CyEngineTaskContinue, CyGoal, CyGoalUsage } from "./protocol.ts";
 import { messageText } from "./transcript.ts";
 
 export interface WorkerSession {

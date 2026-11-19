@@ -309,13 +309,7 @@ export function completeGoal(goal: CyGoal, completion: CyGoalCompletion): CyGoal
 	};
 }
 
-export function blockGoal(
-	goal: CyGoal,
-	reason: string,
-	evidence: string[],
-	streak: number,
-	at: number,
-): CyGoal {
+export function blockGoal(goal: CyGoal, reason: string, evidence: string[], streak: number, at: number): CyGoal {
 	return {
 		...goal,
 		status: "blocked",
@@ -325,12 +319,7 @@ export function blockGoal(
 	};
 }
 
-export function pauseGoal(
-	goal: CyGoal,
-	reason: CyGoalPauseReason,
-	note: string | undefined,
-	at: number,
-): CyGoal {
+export function pauseGoal(goal: CyGoal, reason: CyGoalPauseReason, note: string | undefined, at: number): CyGoal {
 	return {
 		...goal,
 		status: "paused",

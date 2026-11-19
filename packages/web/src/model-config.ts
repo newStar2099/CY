@@ -20,12 +20,7 @@ import { dirname } from "node:path";
 import { clampThinkingLevel, getSupportedThinkingLevels, type Model } from "@earendil-works/pi-ai";
 import type { ThinkingLevel } from "@earendil-works/pi-coding-agent";
 import { isModelThinkingLevel, readModelThinkingLevel, writeModelThinkingLevel } from "./model-thinking.ts";
-import type {
-	CyModelCapabilities,
-	CyModelConfig,
-	CyModelCostRates,
-	CyModelPromptCache,
-} from "./protocol.ts";
+import type { CyModelCapabilities, CyModelConfig, CyModelCostRates, CyModelPromptCache } from "./protocol.ts";
 
 /** Legacy main-endpoint provider id. */
 export const CY_PROVIDER_ID = "zg-endpoint";

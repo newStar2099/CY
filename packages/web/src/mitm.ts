@@ -5,7 +5,7 @@ import { rm, stat, statfs } from "node:fs/promises";
 import { networkInterfaces } from "node:os";
 import { dirname, join, resolve } from "node:path";
 import { setTimeout as delay } from "node:timers/promises";
-import { containerPrefix, execInContainer, runDocker, CY_IMAGE } from "./docker.ts";
+import { CY_IMAGE, containerPrefix, execInContainer, runDocker } from "./docker.ts";
 import { installProjectMitmCa, projectMitmDirectory } from "./mitm-certificate.ts";
 import {
 	deleteMitmFlows,

@@ -1,7 +1,7 @@
 import { createHash, randomBytes, randomUUID } from "node:crypto";
 import { mkdirSync } from "node:fs";
 import { dirname } from "node:path";
-import { listDoctrines, type CyDoctrine } from "./doctrines.ts";
+import { type CyDoctrine, listDoctrines } from "./doctrines.ts";
 import {
 	canonicalJson,
 	IntelligenceError,

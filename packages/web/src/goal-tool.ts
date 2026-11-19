@@ -21,12 +21,7 @@ import type { AgentToolResult, ToolDefinition } from "@earendil-works/pi-coding-
 import { defineTool } from "@earendil-works/pi-coding-agent";
 import { Type } from "typebox";
 import { BLOCKED_STREAK_LIMIT } from "./goal.ts";
-import type {
-	CyGoal,
-	CyGoalCompletion,
-	CyGoalCriterionResult,
-	CyGoalProgress,
-} from "./protocol.ts";
+import type { CyGoal, CyGoalCompletion, CyGoalCriterionResult, CyGoalProgress } from "./protocol.ts";
 
 /** What the runtime has to provide for the tools to work on a live goal. */
 export interface GoalPort {

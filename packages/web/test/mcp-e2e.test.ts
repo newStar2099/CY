@@ -76,8 +76,7 @@ async function afterConfig(action: () => void): Promise<CyMcpConfigView> {
 	drain();
 	action();
 	const message = await waitFor(
-		(candidate): candidate is Extract<CyServerMessage, { type: "mcp_servers" }> =>
-			candidate.type === "mcp_servers",
+		(candidate): candidate is Extract<CyServerMessage, { type: "mcp_servers" }> => candidate.type === "mcp_servers",
 	);
 	return message.config;
 }
@@ -509,8 +508,7 @@ test("the 权限 → MCP switch drives the page's warning without dropping the l
 	drain();
 	send({ type: "get_permissions" });
 	const permissions = await waitFor(
-		(candidate): candidate is Extract<CyServerMessage, { type: "permissions" }> =>
-			candidate.type === "permissions",
+		(candidate): candidate is Extract<CyServerMessage, { type: "permissions" }> => candidate.type === "permissions",
 	);
 	const stored = permissions.config;
 

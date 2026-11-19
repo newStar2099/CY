@@ -30,10 +30,10 @@ import { createServer as createHttpsServer } from "node:https";
 import { dirname, join, relative, resolve, sep } from "node:path";
 import { t } from "../i18n.ts";
 import {
+	type CyPluginManifest,
 	PLUGIN_ID_PATTERN,
 	parsePluginManifest,
 	pluginConfigEnv,
-	type CyPluginManifest,
 	validatePluginConfig,
 } from "../plugin-manifest.ts";
 import type { DockerContext } from "./docker.ts";
@@ -204,10 +204,7 @@ function asRecord(value: unknown): Record<string, unknown> {
 }
 
 /** Values as the container receives them: JSON scalars stringified, nulls dropped. */
-function configValuesFromInput(
-	input: Record<string, unknown>,
-	manifest: CyPluginManifest,
-): Record<string, string> {
+function configValuesFromInput(input: Record<string, unknown>, manifest: CyPluginManifest): Record<string, string> {
 	const values: Record<string, string> = {};
 	for (const field of manifest.config) {
 		const value = input[field.key];

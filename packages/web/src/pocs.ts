@@ -18,14 +18,7 @@ import { mkdirSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { t } from "./i18n.ts";
 import { openZip } from "./poc-zip.ts";
-import type {
-	CyPoc,
-	CyPocFilters,
-	CyPocImportOutcome,
-	CyPocSeverity,
-	CyPocStats,
-	CyPocSummary,
-} from "./protocol.ts";
+import type { CyPoc, CyPocFilters, CyPocImportOutcome, CyPocSeverity, CyPocStats, CyPocSummary } from "./protocol.ts";
 import { openSqliteDatabase, type SqliteDatabase, type SqliteStatement } from "./sqlite.ts";
 
 /** Largest template accepted; real nuclei templates are a few kilobytes. */
@@ -287,11 +280,7 @@ export class PocStore {
 	 * the loop yields every `ASYNC_YIELD_EVERY` entries so health checks, progress
 	 * polls, and the WebSocket stay responsive.
 	 */
-	importAsync(
-		files: ImportFile[],
-		options: PocImportOptions = {},
-		now = new Date(),
-	): Promise<CyPocImportOutcome> {
+	importAsync(files: ImportFile[], options: PocImportOptions = {}, now = new Date()): Promise<CyPocImportOutcome> {
 		const run = (): Promise<CyPocImportOutcome> => this.runImportAsync(files, options, now);
 		const result = this.importTail.then(run, run);
 		this.importTail = result.then(

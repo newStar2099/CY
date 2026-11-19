@@ -16,7 +16,7 @@ import { existsSync, mkdirSync, unlinkSync, writeFileSync } from "node:fs";
 import { homedir } from "node:os";
 import { join } from "node:path";
 import { DEFAULT_CONTAINER_NETWORK, readContainerNetwork } from "./container-network.ts";
-import { runDocker, CY_IMAGE } from "./docker.ts";
+import { CY_IMAGE, runDocker } from "./docker.ts";
 import { GATEWAY_RUNTIME } from "./gateway-runtime.ts";
 import { t } from "./i18n.ts";
 import { resolveLibraryRole } from "./model-library.ts";
@@ -257,18 +257,7 @@ async function checkContainerRun(): Promise<CyEnvItem> {
 	// Exit code is the signal: it is non-zero when the image cannot start at all.
 	// `--pull=never` keeps a missing image from turning into a registry download.
 	const result = await runDocker(
-		[
-			"run",
-			"--rm",
-			"--pull=never",
-			"--network",
-			"none",
-			"--entrypoint",
-			"sh",
-			CY_IMAGE,
-			"-c",
-			"echo cy-env-ok",
-		],
+		["run", "--rm", "--pull=never", "--network", "none", "--entrypoint", "sh", CY_IMAGE, "-c", "echo cy-env-ok"],
 		{ timeoutMs: 120000 },
 	);
 	if (result.code !== 0) {
@@ -745,13 +734,7 @@ export async function checkEnvironment(options: EnvCheckOptions): Promise<CyEnvR
 	const imageItems = dockerReady
 		? await checkImage(runtime.hostPlatform)
 		: [
-				skipped(
-					"image-present",
-					GROUP_IMAGE,
-					t("工具镜像 {image}", { image: CY_IMAGE }),
-					t("Docker 不可用"),
-					true,
-				),
+				skipped("image-present", GROUP_IMAGE, t("工具镜像 {image}", { image: CY_IMAGE }), t("Docker 不可用"), true),
 				skipped("image-platform", GROUP_IMAGE, t("镜像与宿主架构"), t("Docker 不可用")),
 			];
 	items.push(

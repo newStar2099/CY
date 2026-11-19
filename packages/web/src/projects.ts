@@ -15,13 +15,13 @@ import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node
 import { dirname } from "node:path";
 import { readContainerNetwork } from "./container-network.ts";
 import {
+	CY_IMAGE,
 	containerNameFor,
 	createContainer,
 	ensureContainer,
 	hasImage,
 	projectWorkDir,
 	removeContainer,
-	CY_IMAGE,
 	stopContainer,
 } from "./docker.ts";
 import { ensureGateway, projectGatewayDir, withGatewayLock } from "./gateway.ts";
@@ -388,17 +388,11 @@ export async function addProject(
  * bind mount and survives; the container's own layer does not, so anything
  * installed with apt or written outside /work is lost.
  */
-export async function recreateProject(
-	agentDir: string,
-	id: string,
-): Promise<{ project?: CyProject; error?: string }> {
+export async function recreateProject(agentDir: string, id: string): Promise<{ project?: CyProject; error?: string }> {
 	return withGatewayLock(`${agentDir}:${id}`, () => recreateProjectUnlocked(agentDir, id));
 }
 
-async function recreateProjectUnlocked(
-	agentDir: string,
-	id: string,
-): Promise<{ project?: CyProject; error?: string }> {
+async function recreateProjectUnlocked(agentDir: string, id: string): Promise<{ project?: CyProject; error?: string }> {
 	const file = readProjects(agentDir);
 	const project = file.projects.find((entry) => entry.id === id);
 	if (!project) return { error: t("项目不存在") };
@@ -638,17 +632,11 @@ export async function ensureProjectReady(project: CyProject, agentDir: string): 
  * sidecar is stopped after it — stopping the sidecar first would leave the
  * container on a namespace nothing is routing.
  */
-export async function stopProject(
-	agentDir: string,
-	id: string,
-): Promise<{ project?: CyProject; error?: string }> {
+export async function stopProject(agentDir: string, id: string): Promise<{ project?: CyProject; error?: string }> {
 	return withGatewayLock(`${agentDir}:${id}`, () => stopProjectUnlocked(agentDir, id));
 }
 
-async function stopProjectUnlocked(
-	agentDir: string,
-	id: string,
-): Promise<{ project?: CyProject; error?: string }> {
+async function stopProjectUnlocked(agentDir: string, id: string): Promise<{ project?: CyProject; error?: string }> {
 	const file = readProjects(agentDir);
 	const project = file.projects.find((entry) => entry.id === id);
 	if (!project) return { error: t("项目不存在") };

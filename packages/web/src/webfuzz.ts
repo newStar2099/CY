@@ -2,7 +2,7 @@
 import { randomUUID } from "node:crypto";
 import { existsSync, mkdirSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
-import { execInContainer, runDocker, CY_IMAGE } from "./docker.ts";
+import { CY_IMAGE, execInContainer, runDocker } from "./docker.ts";
 import { MitmError } from "./mitm-store.ts";
 import { readReplaydBinary, replaydArchFromUname, replaydBinaryHint } from "./replayd-binary.ts";
 import { openSqliteDatabase } from "./sqlite.ts";

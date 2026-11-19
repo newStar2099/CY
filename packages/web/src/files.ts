@@ -276,11 +276,7 @@ const PREVIEW_SCRIPT = ['size=$(wc -c < "$1" 2>/dev/null) || exit 2', 'echo "$si
 );
 
 /** Read a bounded preview: text inline, images as base64, anything else flagged binary. */
-export async function readFilePreview(
-	container: string,
-	path: string,
-	signal?: AbortSignal,
-): Promise<CyFilePreview> {
+export async function readFilePreview(container: string, path: string, signal?: AbortSignal): Promise<CyFilePreview> {
 	const target = resolveWorkPath(path);
 	const result = await execInContainer(container, PREVIEW_SCRIPT, [target, String(PREVIEW_MAX_BYTES + 1)], {
 		signal,

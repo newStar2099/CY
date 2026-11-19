@@ -26,7 +26,7 @@ import type {
 	CyTestResult,
 	CyVulnerability,
 } from "./protocol.ts";
-import { SESSION_STATUS_LABELS, type CySessionStatus } from "./session-status.ts";
+import { type CySessionStatus, SESSION_STATUS_LABELS } from "./session-status.ts";
 import { CY_VULN_SEVERITY_LABELS, CY_VULN_STATUS_LABELS } from "./vulnerabilities.ts";
 
 const SEND_TIMEOUT_MS = 10000;
@@ -106,11 +106,7 @@ export function fitPayload(config: CyNotifyChannelConfig, title: string, markdow
 }
 
 /** One delivery attempt. Returns the failure reason, or undefined on success. */
-async function attempt(
-	config: CyNotifyChannelConfig,
-	title: string,
-	markdown: string,
-): Promise<string | undefined> {
+async function attempt(config: CyNotifyChannelConfig, title: string, markdown: string): Promise<string | undefined> {
 	const url = signedWebhookUrl(config.webhook, config.secret, Date.now());
 	let response: Response;
 	try {

@@ -19,12 +19,12 @@ import { sidecarNetworkFlags } from "../src/container-network.ts";
 import { projectGatewayDir } from "../src/gateway.ts";
 import {
 	addProject,
+	type CyProject,
 	changeProjectProxy,
 	listProjects,
 	projectProxySettings,
 	recreateProject,
 	refreshProjectGateways,
-	type CyProject,
 	startProject,
 	stopProject,
 } from "../src/projects.ts";
@@ -123,10 +123,7 @@ function configOf(settings: Parameters<typeof buildSingboxConfig>[0]): Record<st
  * these from a profile through `resolveProjectProxy`; the configuration tests want
  * them without a file behind them.
  */
-function settingsOf(
-	simple: Partial<CySimpleProxy> = {},
-	overrides: Partial<CyProxySettings> = {},
-): CyProxySettings {
+function settingsOf(simple: Partial<CySimpleProxy> = {}, overrides: Partial<CyProxySettings> = {}): CyProxySettings {
 	return {
 		mode: "simple",
 		simple: { type: "socks5", server: "", port: 0, username: "", password: "", tls: false, ...simple },

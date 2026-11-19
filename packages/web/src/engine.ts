@@ -31,8 +31,9 @@ import { parseCodeReproductionResult } from "./code-reproduction.ts";
 import { type CommanderPort, createCommanderTools, formatTaskBoard, retryDecision } from "./commander-tools.ts";
 import type { CredentialStore } from "./credential-store.ts";
 import { createCredentialTools, SessionCredentialAccess } from "./credential-tool.ts";
+import type { TaskSessionOptions } from "./cy-session.ts";
 import { containerWorkPath, dockerBashOperations } from "./docker.ts";
-import { listDoctrines, resolveDoctrines, type CyDoctrine } from "./doctrines.ts";
+import { type CyDoctrine, listDoctrines, resolveDoctrines } from "./doctrines.ts";
 import {
 	applyScheduleAction,
 	dueScheduleAction,
@@ -67,7 +68,6 @@ import type {
 	CyPreset,
 	CyProjectInfo,
 } from "./protocol.ts";
-import type { TaskSessionOptions } from "./cy-session.ts";
 import {
 	EngineWorker,
 	errorText,
@@ -1931,10 +1931,7 @@ export function allowedPresets(agentDir: string, engine: Pick<CyEngine, "presetI
  * nothing available the hint has to say what to do instead, and that depends on
  * whether the engine still accepts a task with no preset at all.
  */
-export function presetChoiceHint(
-	agentDir: string,
-	engine: Pick<CyEngine, "presetIds" | "presetOptional">,
-): string {
+export function presetChoiceHint(agentDir: string, engine: Pick<CyEngine, "presetIds" | "presetOptional">): string {
 	const presets = allowedPresets(agentDir, engine);
 	if (presets.length === 0) {
 		return engine.presetOptional

@@ -31,12 +31,7 @@ import type {
 import { openSqliteDatabase, type SqliteDatabase, type SqliteValue } from "./sqlite.ts";
 
 export const CY_VULN_SEVERITIES: readonly CyVulnSeverity[] = ["critical", "high", "medium", "low", "info"];
-export const CY_VULN_STATUSES: readonly CyVulnStatus[] = [
-	"pending",
-	"confirmed",
-	"false_positive",
-	"fixed",
-];
+export const CY_VULN_STATUSES: readonly CyVulnStatus[] = ["pending", "confirmed", "false_positive", "fixed"];
 
 /** Chinese labels, used by the Markdown export and the notification. */
 export const CY_VULN_SEVERITY_LABELS: Record<CyVulnSeverity, string> = {
@@ -566,10 +561,7 @@ export class VulnerabilityStore {
 		if (!existing || existing.review.state !== "queued") return;
 		this.db
 			.prepare("UPDATE vulnerabilities SET review = ? WHERE id = ?")
-			.run(
-				JSON.stringify({ ...existing.review, state: "skipped", at: Date.now() } satisfies CyVulnReview),
-				id,
-			);
+			.run(JSON.stringify({ ...existing.review, state: "skipped", at: Date.now() } satisfies CyVulnReview), id);
 	}
 
 	/** Drop every queued review, so turning automatic review off clears the backlog. */

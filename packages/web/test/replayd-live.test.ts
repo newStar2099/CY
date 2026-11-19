@@ -185,9 +185,7 @@ test("a healthy service is reused, so no binary is pushed and nothing is started
 		url.startsWith("/api/health")
 			? {
 					status: 200,
-					body: Buffer.from(
-						JSON.stringify({ status: "ok", version: "0.1.0", dataDir: "/work/.cy/replayd" }),
-					),
+					body: Buffer.from(JSON.stringify({ status: "ok", version: "0.1.0", dataDir: "/work/.cy/replayd" })),
 					type: "application/json",
 				}
 			: { status: 404, body: Buffer.from("{}"), type: "application/json" },

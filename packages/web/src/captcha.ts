@@ -29,12 +29,7 @@ const CAPTCHA_COLORS = [
 ];
 
 /** Mixed typefaces make automated recognition harder. */
-const CAPTCHA_FONTS = [
-	"Arial, sans-serif",
-	"Georgia, serif",
-	"'Courier New', monospace",
-	"Verdana, sans-serif",
-];
+const CAPTCHA_FONTS = ["Arial, sans-serif", "Georgia, serif", "'Courier New', monospace", "Verdana, sans-serif"];
 
 interface CaptchaEntry {
 	code: string;

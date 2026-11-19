@@ -611,10 +611,7 @@ export function apiModelExportName(model: CyApiModel, format: "json" | "yaml"): 
 }
 
 /** The document as a downloadable file, in the format the operator asked for. */
-export function buildApiModelExport(
-	model: CyApiModel,
-	format: "json" | "yaml",
-): { filename: string; text: string } {
+export function buildApiModelExport(model: CyApiModel, format: "json" | "yaml"): { filename: string; text: string } {
 	return {
 		filename: apiModelExportName(model, format),
 		text: format === "yaml" ? toYaml(model.openapi) : `${JSON.stringify(model.openapi, null, 2)}\n`,

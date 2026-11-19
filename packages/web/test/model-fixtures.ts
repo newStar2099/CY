@@ -11,11 +11,7 @@ import { addLibraryEntry, setLibraryRole } from "../src/model-library.ts";
 import type { CyModelConfig, CyModelRoleName } from "../src/protocol.ts";
 
 /** Write one entry and point `role` at it. Returns the new entry id. */
-export function writeTestModel(
-	agentDir: string,
-	config: CyModelConfig,
-	role: CyModelRoleName = "main",
-): string {
+export function writeTestModel(agentDir: string, config: CyModelConfig, role: CyModelRoleName = "main"): string {
 	const entry = addLibraryEntry(agentDir, {
 		name: config.modelId,
 		baseUrl: config.baseUrl,

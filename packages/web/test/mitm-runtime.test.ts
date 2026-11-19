@@ -4,10 +4,10 @@ import { join } from "node:path";
 import { getCurrentSystemPrompt } from "@earendil-works/pi-ai";
 import * as sdk from "@earendil-works/pi-coding-agent";
 import { afterEach, beforeEach, expect, test, vi } from "vitest";
+import { CyRuntime, type CyRuntimeHooks } from "../src/cy-session.ts";
 import { MitmCenter } from "../src/mitm.ts";
 import { MITM_TOOL_NAMES } from "../src/mitm-tool.ts";
 import { defaultPermissions, writePermissionsConfig } from "../src/permissions.ts";
-import { CyRuntime, type CyRuntimeHooks } from "../src/cy-session.ts";
 import * as subagent from "../src/subagent.ts";
 import { writeTestModel } from "./model-fixtures.ts";
 

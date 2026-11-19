@@ -160,9 +160,7 @@ export interface CyPluginManifest {
 	ui: CyPluginUi | null;
 }
 
-export type CyPluginParseResult =
-	| { ok: true; manifest: CyPluginManifest }
-	| { ok: false; errors: string[] };
+export type CyPluginParseResult = { ok: true; manifest: CyPluginManifest } | { ok: false; errors: string[] };
 
 /** Reverse-DNS identifier; it is also the container's data directory name. */
 export const PLUGIN_ID_PATTERN = /^[a-z0-9]+(\.[a-z0-9-]+)+$/;

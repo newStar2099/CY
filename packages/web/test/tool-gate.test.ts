@@ -110,9 +110,9 @@ describe("shouldJudgeTool", () => {
 	test("plugins need the second switch, custom MCP servers do not", () => {
 		const config = { ...CONFIG, mcpTools: { enabled: true, includePlugins: false } };
 		expect(shouldJudgeTool({ toolName: "mcp__files__read_file", mode: "ai", config })).toBe(true);
-		expect(
-			shouldJudgeTool({ toolName: "mcp__plugin-com-cy-vshell__execute_command", mode: "ai", config }),
-		).toBe(false);
+		expect(shouldJudgeTool({ toolName: "mcp__plugin-com-cy-vshell__execute_command", mode: "ai", config })).toBe(
+			false,
+		);
 	});
 });
 

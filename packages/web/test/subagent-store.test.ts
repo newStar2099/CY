@@ -34,11 +34,7 @@ afterEach(() => {
 	for (const root of roots.splice(0)) rmSync(root, { recursive: true, force: true });
 });
 
-function step(
-	seq: number,
-	kind: CySubagentEvent["kind"],
-	extra: Partial<CySubagentEvent> = {},
-): CySubagentEvent {
+function step(seq: number, kind: CySubagentEvent["kind"], extra: Partial<CySubagentEvent> = {}): CySubagentEvent {
 	return { seq, kind, at: 1700000000000 + seq, ...extra };
 }
 

@@ -17,10 +17,15 @@ import type { CySources } from "./protocol.ts";
 /** Official base image, used when the field is empty. */
 export const DEFAULT_BASE_IMAGE = "kalilinux/kali-rolling:latest";
 
-/** One-click Chinese mirrors; every value is reachable and apt-safe (http). */
+/**
+ * One-click Chinese mirrors. apt uses https: on some networks the plaintext
+ * mirror is tampered with mid-flight (sqv: "Message has been manipulated"),
+ * which fails the build at the apt-get update layer — the https endpoint of
+ * the same mirror is unaffected.
+ */
 export const CHINA_SOURCES: CySources = {
 	baseImage: "docker.m.daocloud.io/kalilinux/kali-rolling:latest",
-	aptMirror: "http://mirrors.tuna.tsinghua.edu.cn/kali",
+	aptMirror: "https://mirrors.tuna.tsinghua.edu.cn/kali",
 	pipIndex: "https://pypi.tuna.tsinghua.edu.cn/simple",
 	npmRegistry: "https://registry.npmmirror.com",
 	goProxy: "https://goproxy.cn,direct",
@@ -87,7 +92,10 @@ function asString(value: unknown): string {
 export function normalizeSources(input: Partial<CySources>): CySources {
 	return {
 		baseImage: normalizeImage(asString(input.baseImage)),
-		aptMirror: normalizeUrl(asString(input.aptMirror), "http"),
+		// https fallback: on this network plaintext mirrors get tampered with
+		// mid-flight (sqv: "Message has been manipulated"), so an unschemed
+		// input must not silently become an http:// URL.
+		aptMirror: normalizeUrl(asString(input.aptMirror), "https"),
 		pipIndex: normalizeUrl(asString(input.pipIndex), "https"),
 		npmRegistry: normalizeUrl(asString(input.npmRegistry), "https"),
 		goProxy: normalizeGoProxy(asString(input.goProxy)),

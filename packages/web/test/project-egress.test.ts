@@ -6,7 +6,7 @@ import { afterEach, beforeEach, expect, test, vi } from "vitest";
 import * as docker from "../src/docker.ts";
 import { setServerLanguage } from "../src/i18n.ts";
 import { handleProjectEgressApi, testProjectEgressIp } from "../src/project-egress.ts";
-import { listProjects, type CyProject, setLastActiveProject } from "../src/projects.ts";
+import { type CyProject, listProjects, setLastActiveProject } from "../src/projects.ts";
 
 let root: string;
 let server: Server | undefined;

@@ -2,7 +2,7 @@
 import { createHash, randomBytes, randomUUID } from "node:crypto";
 import { copyFileSync, existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
-import { runDocker, CY_IMAGE } from "./docker.ts";
+import { CY_IMAGE, runDocker } from "./docker.ts";
 import { GATEWAY_RUNTIME } from "./gateway-runtime.ts";
 import { t } from "./i18n.ts";
 import { freePort } from "./node-test.ts";
@@ -180,14 +180,7 @@ export async function ensureGateway(
 	// Validate before disturbing the old client or pausing any project processes.
 	if (settings?.mode === "simple" || settings?.mode === "subscription") {
 		const checked = await runDocker(
-			[
-				"exec",
-				sidecar,
-				"/etc/cy-gateway/sing-box",
-				"check",
-				"-c",
-				"/etc/cy-gateway/candidate/config.json",
-			],
+			["exec", sidecar, "/etc/cy-gateway/sing-box", "check", "-c", "/etc/cy-gateway/candidate/config.json"],
 			{ timeoutMs: 30000 },
 		);
 		if (checked.code !== 0) return { ok: false, error: t("代理配置未通过 sing-box 校验") };

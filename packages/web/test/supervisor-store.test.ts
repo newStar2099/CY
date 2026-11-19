@@ -4,11 +4,7 @@ import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, beforeEach, describe, expect, test } from "vitest";
-import type {
-	CySupervisorAdvice,
-	CySupervisorAuditItem,
-	CySupervisorEpisode,
-} from "../src/protocol.ts";
+import type { CySupervisorAdvice, CySupervisorAuditItem, CySupervisorEpisode } from "../src/protocol.ts";
 import { openSqliteDatabase } from "../src/sqlite.ts";
 import { SupervisorStore } from "../src/supervisor-store.ts";
 

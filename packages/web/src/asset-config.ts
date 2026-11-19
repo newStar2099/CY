@@ -287,11 +287,7 @@ export function setAssetQueryLimit(agentDir: string, limit: number): CyAssetConf
  * the settings screen shows the truth after a failure rather than only what the
  * operator last tested by hand.
  */
-export function recordAssetStatus(
-	agentDir: string,
-	platform: CyAssetPlatform,
-	status: CyAssetStatus,
-): void {
+export function recordAssetStatus(agentDir: string, platform: CyAssetPlatform, status: CyAssetStatus): void {
 	// Skip rather than overwrite: a status line is never worth the operator's keys.
 	const config = readAssetConfigForUpdate(agentDir);
 	if (!config) return;

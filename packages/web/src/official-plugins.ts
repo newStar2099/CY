@@ -8,7 +8,7 @@
  */
 
 import { OFFICIAL_PLUGINS } from "./official-plugins.generated.ts";
-import { parsePluginManifest, type CyPluginManifest } from "./plugin-manifest.ts";
+import { type CyPluginManifest, parsePluginManifest } from "./plugin-manifest.ts";
 
 export interface OfficialPluginView {
 	manifest: CyPluginManifest;

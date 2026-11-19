@@ -22,7 +22,7 @@
 
 import { randomUUID } from "node:crypto";
 import { rmSync } from "node:fs";
-import { containerPrefix, hasImage, runDocker, CY_IMAGE } from "./docker.ts";
+import { CY_IMAGE, containerPrefix, hasImage, runDocker } from "./docker.ts";
 import { t } from "./i18n.ts";
 import { measureNodes } from "./node-test.ts";
 import type { CyProxyNode, CyProxySettings } from "./protocol.ts";
@@ -201,11 +201,7 @@ async function checkSimpleProxy(
 }
 
 /** The WireGuard path: start the real sidecar shape, wait for wg0, fetch through it. */
-async function checkWireGuard(
-	agentDir: string,
-	settings: CyProxySettings,
-	url: string,
-): Promise<ProxyCheckResult> {
+async function checkWireGuard(agentDir: string, settings: CyProxySettings, url: string): Promise<ProxyCheckResult> {
 	if (!(await hasImage())) {
 		return failure(t("工具镜像 {image} 不存在，先在「环境」页构建", { image: CY_IMAGE }));
 	}
@@ -213,12 +209,7 @@ async function checkWireGuard(
 	if (!written.ok) return failure(written.error);
 	const container = testContainerName();
 	try {
-		const created = await createWireGuardContainer(
-			container,
-			written.path,
-			CY_IMAGE,
-			settings.wireguard.killSwitch,
-		);
+		const created = await createWireGuardContainer(container, written.path, CY_IMAGE, settings.wireguard.killSwitch);
 		if (!created.ok) {
 			return failure(t("测试容器启动失败：{error}", { error: created.error ?? t("未知错误") }));
 		}

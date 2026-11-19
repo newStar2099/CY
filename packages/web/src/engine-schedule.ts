@@ -80,10 +80,7 @@ export function normalizeSchedule(input: CyEngineScheduleInput, now: number): Cy
 }
 
 /** Find the next local-calendar day at the same wall-clock time. */
-export function nextDailyOccurrence(
-	schedule: Pick<CyEngineSchedule, "startAt" | "timezone">,
-	after: number,
-): number {
+export function nextDailyOccurrence(schedule: Pick<CyEngineSchedule, "startAt" | "timezone">, after: number): number {
 	const format = new Intl.DateTimeFormat("en-CA", {
 		timeZone: schedule.timezone,
 		year: "numeric",

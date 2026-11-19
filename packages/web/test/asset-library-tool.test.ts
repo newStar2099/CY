@@ -10,7 +10,7 @@ import type { ToolDefinition } from "@earendil-works/pi-coding-agent";
 import { afterEach, expect, test } from "vitest";
 import { AssetLibraryStore } from "../src/asset-library.ts";
 import { createAssetLibraryTools } from "../src/asset-library-tool.ts";
-import { defaultPermissions, type CyPermissionSet } from "../src/permissions.ts";
+import { type CyPermissionSet, defaultPermissions } from "../src/permissions.ts";
 import type { CyVulnSummary } from "../src/protocol.ts";
 
 let root = "";

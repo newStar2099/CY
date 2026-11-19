@@ -27,7 +27,7 @@ import {
 } from "@earendil-works/pi-coding-agent";
 import { Type } from "typebox";
 import { t } from "./i18n.ts";
-import { excludeToolsFor, type CyPermissionSet } from "./permissions.ts";
+import { type CyPermissionSet, excludeToolsFor } from "./permissions.ts";
 import type { SubagentRegistry } from "./subagents.ts";
 
 /** Turn budget before a sub-agent is aborted. */

@@ -3,12 +3,7 @@ import { chmodSync, existsSync, mkdirSync, readFileSync, writeFileSync } from "n
 import { dirname } from "node:path";
 import { t } from "./i18n.ts";
 import { webhookUrlError } from "./notify.ts";
-import type {
-	CyNotifyConfig,
-	CyNotifyGroup,
-	CyNotifyKinds,
-	CyNotifyTarget,
-} from "./notify-types.ts";
+import type { CyNotifyConfig, CyNotifyGroup, CyNotifyKinds, CyNotifyTarget } from "./notify-types.ts";
 
 export const DEFAULT_SUMMARY_LIMIT = 2000;
 

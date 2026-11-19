@@ -52,11 +52,7 @@ export function isPluginTool(toolName: string): boolean {
  * `mode` is the session's effective mode: `auto` and `review` have their own
  * answer for every tool call, and the judge only exists in `ai`.
  */
-export function shouldJudgeTool(input: {
-	toolName: string;
-	mode: CyMode;
-	config: CyGatekeeperConfig;
-}): boolean {
+export function shouldJudgeTool(input: { toolName: string; mode: CyMode; config: CyGatekeeperConfig }): boolean {
 	if (input.mode !== "ai") return false;
 	if (!input.config.mcpTools.enabled) return false;
 	const server = mcpToolServer(input.toolName);

@@ -36,13 +36,7 @@ import { openSqliteDatabase, type SqliteDatabase, type SqliteValue } from "./sql
 
 export const ASSET_KINDS: readonly CyAssetKind[] = ["domain", "ip", "service", "url"];
 export const ASSET_STATES: readonly CyAssetState[] = ["pending", "testing", "tested", "out_of_scope"];
-export const ASSET_OUTCOMES: readonly CyAssetOutcome[] = [
-	"note",
-	"clean",
-	"suspicious",
-	"vulnerable",
-	"unreachable",
-];
+export const ASSET_OUTCOMES: readonly CyAssetOutcome[] = ["note", "clean", "suspicious", "vulnerable", "unreachable"];
 
 /** Chinese labels used by the tools, the report and the page. */
 export const ASSET_KIND_LABELS: Record<CyAssetKind, string> = {

@@ -14,13 +14,7 @@ import { join } from "node:path";
 import { afterAll, beforeAll, expect, test } from "vitest";
 import WebSocket from "ws";
 import { AssetLibraryStore } from "../src/asset-library.ts";
-import type {
-	CyAssetDetail,
-	CyAssetStats,
-	CyAssetSummary,
-	CyClientMessage,
-	CyServerMessage,
-} from "../src/protocol.ts";
+import type { CyAssetDetail, CyAssetStats, CyAssetSummary, CyClientMessage, CyServerMessage } from "../src/protocol.ts";
 import { startCyServer } from "../src/server.ts";
 import { VulnerabilityStore } from "../src/vulnerabilities.ts";
 import { type FakeDocker, installFakeDocker } from "./fake-docker.ts";
@@ -50,10 +44,7 @@ function dispatch(message: CyServerMessage): void {
 	incoming.push(message);
 }
 
-function waitFor(
-	predicate: (message: CyServerMessage) => boolean,
-	timeoutMs = 20000,
-): Promise<CyServerMessage> {
+function waitFor(predicate: (message: CyServerMessage) => boolean, timeoutMs = 20000): Promise<CyServerMessage> {
 	const buffered = incoming.findIndex(predicate);
 	if (buffered >= 0) {
 		const [message] = incoming.splice(buffered, 1);

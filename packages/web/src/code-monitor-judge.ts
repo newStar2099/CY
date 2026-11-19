@@ -116,9 +116,7 @@ export function parseMonitorVerdict(raw: string): CodeJudgeVerdict {
 	const title = typeof parsed.title === "string" ? parsed.title.trim() : "";
 	const severityRaw = typeof parsed.severity === "string" ? parsed.severity.trim().toLowerCase() : "";
 	const severity =
-		parsed.security && SEVERITIES.includes(severityRaw as CyVulnSeverity)
-			? (severityRaw as CyVulnSeverity)
-			: null;
+		parsed.security && SEVERITIES.includes(severityRaw as CyVulnSeverity) ? (severityRaw as CyVulnSeverity) : null;
 	const vulnTypeRaw = typeof parsed.vuln_type === "string" ? parsed.vuln_type.trim() : "";
 	const categoryRaw = typeof parsed.vuln_category === "string" ? parsed.vuln_category.trim().toLowerCase() : "";
 	// A security verdict without a usable class is rejected, not guessed into

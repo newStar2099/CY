@@ -15,17 +15,11 @@ import type { AgentToolResult, ToolDefinition } from "@earendil-works/pi-coding-
 import { defineTool } from "@earendil-works/pi-coding-agent";
 import { Type } from "typebox";
 import { toContainerWorkPath } from "./files.ts";
-import type {
-	CyVulnEvidence,
-	CyVulnerability,
-	CyVulnFilters,
-	CyVulnSeverity,
-	CyVulnStatus,
-} from "./protocol.ts";
+import type { CyVulnEvidence, CyVulnerability, CyVulnFilters, CyVulnSeverity, CyVulnStatus } from "./protocol.ts";
 import {
-	isSeverityMismatch,
 	CY_VULN_SEVERITY_LABELS,
 	CY_VULN_STATUS_LABELS,
+	isSeverityMismatch,
 	severityForCvss,
 	type VulnerabilityStore,
 } from "./vulnerabilities.ts";

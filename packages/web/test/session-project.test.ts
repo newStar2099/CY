@@ -8,8 +8,8 @@
  */
 
 import { expect, test } from "vitest";
-import type { CyProject } from "../src/projects.ts";
 import { resolveSessionProject } from "../src/cy-session.ts";
+import type { CyProject } from "../src/projects.ts";
 
 function project(id: string, name: string, workDir: string): CyProject {
 	return { id, name, container: `cy-${id}`, workDir, createdAt: "2026-01-01T00:00:00.000Z" };
