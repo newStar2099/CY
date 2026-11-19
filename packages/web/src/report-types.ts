@@ -52,3 +52,34 @@ export interface ReportPage {
 	page: number;
 	pageSize: number;
 }
+
+/** Report appearance template: header injected into exports. */
+export interface ReportTemplateRecord {
+	id: number;
+	userId: string;
+	name: string;
+	title: string;
+	reviewer: string;
+	/** Data-URL image embedded at the top of exported reports. */
+	logo: string;
+	logoWidth: number;
+	logoHeight: number;
+	showDate: boolean;
+	watermarkText: string;
+	watermarkEnabled: boolean;
+	createdAt: string;
+	updatedAt: string;
+}
+
+/** Mutable fields of a report template (create/update payload). */
+export interface ReportTemplatePatch {
+	name: string;
+	title: string;
+	reviewer: string;
+	logo: string;
+	logoWidth: number;
+	logoHeight: number;
+	showDate: boolean;
+	watermarkText: string;
+	watermarkEnabled: boolean;
+}

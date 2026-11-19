@@ -10,6 +10,19 @@ export function createReportTool(options: {
 	workDir: string;
 	container?: string;
 }): ToolDefinition {
+	/** Report titles follow 目标_时间_类型 (www.hytera.com_20261119-1530_渗透测试报告).
+	 * Agents occasionally omit the timestamp segment; insert the submission
+	 * time at the first underscore, or prepend it when no separator exists. */
+	function normalizeReportTitle(title: string): string {
+		if (/_\d{8}-\d{4}_/.test(title)) return title;
+		const now = new Date();
+		const pad = (value: number) => String(value).padStart(2, "0");
+		const stamp = `${now.getFullYear()}${pad(now.getMonth() + 1)}${pad(now.getDate())}-${pad(now.getHours())}${pad(now.getMinutes())}`;
+		const index = title.indexOf("_");
+		if (index > 0 && index < title.length - 1)
+			return `${title.slice(0, index)}_${stamp}_${title.slice(index + 1)}`.slice(0, 120);
+		return `${stamp}_${title}`.slice(0, 120);
+	}
 	return defineTool({
 		name: "report_submit",
 		label: "Submit report",
@@ -18,6 +31,7 @@ export function createReportTool(options: {
 		promptSnippet: "Submit the completed task's Markdown report and images to the project's report center",
 		promptGuidelines: [
 			"Before ending a substantive assessment or autonomous goal, proactively submit a Markdown report with report_submit. Ordinary questions and short explanations do not need reports; do not submit a report for every intermediate round.",
+			"Report title format: 目标(域名或IP)_提交时间(YYYYMMDD-HHMM)_简短报告类型, e.g. www.hytera.com_20261119-1530_渗透测试报告. Keep the type short (渗透测试报告 / 漏洞分析报告 / 基线核查报告); the timestamp is the current submission time. Vulnerability lists, counts and company names belong in the report body, never in the title.",
 			"Report the actual scope, methods, evidence, outcomes, vulnerability hub references, limitations and recommendations. Zero confirmed findings is a valid outcome; never invent evidence or convert unfinished work into a success.",
 			"Submit validated findings to the vulnerability hub first. Then submit the final report before goal_complete or the final answer. Report submission does not itself end a goal or task.",
 			"Use standard Markdown image syntax for evidence images. Local files and base64 data images are archived. Download remote images into the project first; do not include external image URLs. Correct missing images and retry if submission fails.",
@@ -27,7 +41,8 @@ export function createReportTool(options: {
 			title: Type.String({
 				minLength: 1,
 				maxLength: 120,
-				description: "One-line report title identifying the task and target.",
+				description:
+					"Report title as 目标(域名或IP)_提交时间(YYYYMMDD-HHMM)_简短报告类型, e.g. www.hytera.com_20261119-1530_渗透测试报告. No vulnerability lists or company names.",
 			}),
 			markdown: Type.Optional(
 				Type.String({
@@ -62,6 +77,7 @@ export function createReportTool(options: {
 					provenance,
 					key: `${provenance.sessionId ?? "session"}:${toolCallId}`,
 					...params,
+					title: normalizeReportTitle(params.title.trim()),
 				});
 				return {
 					content: [

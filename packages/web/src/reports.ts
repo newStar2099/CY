@@ -10,6 +10,8 @@ import type {
 	ReportProvenance,
 	ReportSource,
 	ReportSummary,
+	ReportTemplatePatch,
+	ReportTemplateRecord,
 } from "./report-types.ts";
 import { openSqliteDatabase, type SqliteDatabase, type SqliteValue } from "./sqlite.ts";
 
@@ -40,6 +42,22 @@ interface ImageRow {
 	data?: Uint8Array;
 }
 
+interface TemplateRow {
+	id: number;
+	user_id: string;
+	name: string;
+	title: string;
+	reviewer: string;
+	logo: string;
+	logo_width: number;
+	logo_height: number;
+	show_date: number;
+	watermark_text: string;
+	watermark_enabled: number;
+	created_at: string;
+	updated_at: string;
+}
+
 const SUMMARY_COLUMNS = "id, title, provenance, created_at, image_count, size";
 
 function revision(title: string, markdown: string): string {
@@ -61,6 +79,24 @@ function summary(row: ReportRow): ReportSummary {
 
 function imageInfo(row: ImageRow): ReportImage {
 	return { id: row.id, source: row.source, filename: row.filename, mimeType: row.mime_type, size: row.size };
+}
+
+function templateRecord(row: TemplateRow): ReportTemplateRecord {
+	return {
+		id: row.id,
+		userId: row.user_id,
+		name: row.name,
+		title: row.title,
+		reviewer: row.reviewer,
+		logo: row.logo,
+		logoWidth: row.logo_width,
+		logoHeight: row.logo_height,
+		showDate: row.show_date !== 0,
+		watermarkText: row.watermark_text,
+		watermarkEnabled: row.watermark_enabled !== 0,
+		createdAt: row.created_at,
+		updatedAt: row.updated_at,
+	};
 }
 
 export function reportsDbPath(agentDir: string): string {
@@ -96,6 +132,14 @@ export class ReportStore {
 				source TEXT NOT NULL, filename TEXT NOT NULL, size INTEGER NOT NULL, data BLOB NOT NULL,
 				PRIMARY KEY(report_id, id)
 			);
+			CREATE TABLE IF NOT EXISTS report_templates (
+				id INTEGER PRIMARY KEY AUTOINCREMENT, user_id TEXT NOT NULL,
+				name TEXT NOT NULL, title TEXT NOT NULL DEFAULT '', reviewer TEXT NOT NULL DEFAULT '',
+				logo TEXT NOT NULL DEFAULT '', logo_width INTEGER NOT NULL DEFAULT 0, logo_height INTEGER NOT NULL DEFAULT 0,
+				show_date INTEGER NOT NULL DEFAULT 1, watermark_text TEXT NOT NULL DEFAULT '', watermark_enabled INTEGER NOT NULL DEFAULT 0,
+				created_at TEXT NOT NULL, updated_at TEXT NOT NULL
+			);
+			CREATE INDEX IF NOT EXISTS report_templates_user ON report_templates(user_id, updated_at DESC);
 		`);
 	}
 
@@ -269,6 +313,72 @@ export class ReportStore {
 
 	purgeProject(projectId: string): number {
 		return Number(this.db.prepare("DELETE FROM reports WHERE project_id = ?").run(projectId).changes ?? 0);
+	}
+
+	listTemplates(userId: string): ReportTemplateRecord[] {
+		const rows = this.db
+			.prepare("SELECT * FROM report_templates WHERE user_id = ? ORDER BY updated_at DESC, id DESC")
+			.all(userId) as TemplateRow[];
+		return rows.map(templateRecord);
+	}
+
+	createTemplate(userId: string, patch: ReportTemplatePatch): ReportTemplateRecord {
+		const now = new Date().toISOString();
+		const result = this.db
+			.prepare(
+				"INSERT INTO report_templates (user_id, name, title, reviewer, logo, logo_width, logo_height, show_date, watermark_text, watermark_enabled, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+			)
+			.run(
+				userId,
+				patch.name,
+				patch.title,
+				patch.reviewer,
+				patch.logo,
+				patch.logoWidth,
+				patch.logoHeight,
+				patch.showDate ? 1 : 0,
+				patch.watermarkText,
+				patch.watermarkEnabled ? 1 : 0,
+				now,
+				now,
+			);
+		const id = Number(result.lastInsertRowid ?? 0);
+		const row = this.db.prepare("SELECT * FROM report_templates WHERE id = ?").get(id) as TemplateRow;
+		return templateRecord(row);
+	}
+
+	updateTemplate(userId: string, id: number, patch: ReportTemplatePatch): ReportTemplateRecord | undefined {
+		const result = this.db
+			.prepare(
+				"UPDATE report_templates SET name = ?, title = ?, reviewer = ?, logo = ?, logo_width = ?, logo_height = ?, show_date = ?, watermark_text = ?, watermark_enabled = ?, updated_at = ? WHERE id = ? AND user_id = ?",
+			)
+			.run(
+				patch.name,
+				patch.title,
+				patch.reviewer,
+				patch.logo,
+				patch.logoWidth,
+				patch.logoHeight,
+				patch.showDate ? 1 : 0,
+				patch.watermarkText,
+				patch.watermarkEnabled ? 1 : 0,
+				new Date().toISOString(),
+				id,
+				userId,
+			);
+		if (Number(result.changes ?? 0) === 0) return undefined;
+		const row = this.db.prepare("SELECT * FROM report_templates WHERE id = ? AND user_id = ?").get(id, userId) as
+			| TemplateRow
+			| undefined;
+		return row ? templateRecord(row) : undefined;
+	}
+
+	deleteTemplate(userId: string, id: number): boolean {
+		return (
+			Number(
+				this.db.prepare("DELETE FROM report_templates WHERE id = ? AND user_id = ?").run(id, userId).changes ?? 0,
+			) > 0
+		);
 	}
 
 	close(): void {

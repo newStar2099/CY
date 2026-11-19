@@ -1,12 +1,16 @@
-import { ArrowLeftOutlined, DeleteOutlined, DownloadOutlined, EditOutlined, ReloadOutlined, SaveOutlined } from "@ant-design/icons";
+import { ArrowLeftOutlined, DeleteOutlined, DownloadOutlined, EditOutlined, FileTextOutlined, FileWordOutlined, FileZipOutlined, ReloadOutlined, SaveOutlined } from "@ant-design/icons";
 import { ProTable, type ProColumns } from "@ant-design/pro-components";
-import { Alert, App, Button, Empty, Flex, Image, Input, Segmented, Select, Skeleton, Space, Tag, Typography } from "antd";
+import { Alert, App, Button, Dropdown, Empty, Flex, Image, Input, Segmented, Select, Skeleton, Space, Tag, Typography } from "antd";
 import { useDeferredValue, useEffect, useRef, useState } from "react";
 import Markdown, { defaultUrlTransform } from "react-markdown";
 import remarkGfm from "remark-gfm";
 import type { ReportDetail, ReportPage, ReportSource, ReportSummary } from "../../../src/report-types.ts";
 import { getLanguage } from "../i18n.ts";
+import { generateDocxFromMarkdown, generateHTMLFromMarkdown, generatePDFFromMarkdown, inlineArchiveImages, saveBlob } from "../report-export.tsx";
+import { applyReportTemplate, ACTIVE_TEMPLATE_EVENT, buildWatermark, getActiveReportTemplate, isTemplateEmpty } from "../report-template.ts";
 import { readJson } from "../read-json.ts";
+import { ReportTemplateDialog } from "./ReportTemplateDialog.tsx";
+import { ReportTemplatePicker } from "./ReportTemplatePicker.tsx";
 import { Page } from "../ui/Page.tsx";
 import "./ReportCenterPage.css";
 
@@ -15,9 +19,19 @@ const sourceLabels: Record<ReportSource, string> = {
 	session: tx("普通会话", "Conversation"), goal: tx("自主目标", "Autonomous goal"), engine: tx("工程", "Engineering"),
 };
 
+export type ExportFormat = "zip" | "md" | "html" | "pdf" | "docx";
+
 function reportUrl(projectId: string, id?: string, suffix = ""): string {
 	return `/api/reports${id ? `/${encodeURIComponent(id)}${suffix}` : ""}?projectId=${encodeURIComponent(projectId)}`;
 }
+
+const formatLabels: Record<ExportFormat, string> = {
+	zip: tx("完整报告包（ZIP）", "Complete bundle (ZIP)"),
+	md: tx("Markdown 文档", "Markdown document"),
+	html: tx("HTML 文档", "HTML document"),
+	pdf: tx("PDF 文档", "PDF document"),
+	docx: tx("Word 文档（DOCX）", "Word document (DOCX)"),
+};
 
 async function reportResponse(url: string, options?: RequestInit): Promise<Response> {
 	const response = await fetch(url, options);
@@ -63,6 +77,16 @@ function ProjectReports({ projectId, refreshToken }: { projectId: string; refres
 	const [error, setError] = useState<string | null>(null);
 	const [openId, setOpenId] = useState<string | null>(null);
 	const [downloading, setDownloading] = useState<string | null>(null);
+	const [pickerOpen, setPickerOpen] = useState(false);
+	const [editorOpen, setEditorOpen] = useState(false);
+	const [activeTemplateName, setActiveTemplateName] = useState<string | null>(null);
+
+	useEffect(() => {
+		const sync = () => { void getActiveReportTemplate().then((template) => setActiveTemplateName(template?.name ?? null)).catch(() => undefined); };
+		sync();
+		window.addEventListener(ACTIVE_TEMPLATE_EVENT, sync);
+		return () => window.removeEventListener(ACTIVE_TEMPLATE_EVENT, sync);
+	}, []);
 
 	useEffect(() => {
 		const controller = new AbortController();
@@ -90,18 +114,34 @@ function ProjectReports({ projectId, refreshToken }: { projectId: string; refres
 		return () => { controller.abort(); window.clearInterval(timer); };
 	}, [projectId, page, search, source, revision, refreshToken]);
 
-	const download = async (report: ReportSummary, format: "zip" | "md" = "zip") => {
+	const download = async (report: ReportSummary, format: ExportFormat = "zip") => {
 		setDownloading(report.id);
 		try {
-			const response = await reportResponse(`${reportUrl(projectId, report.id, "/download")}&format=${format}`);
-			const url = URL.createObjectURL(await response.blob());
-			const anchor = document.createElement("a");
-			anchor.href = url;
-			anchor.download = `${report.title.replace(/[\\/:*?"<>|]/g, "_")}.${format}`;
-			document.body.appendChild(anchor);
-			anchor.click();
-			anchor.remove();
-			window.setTimeout(() => URL.revokeObjectURL(url), 1000);
+			const fileName = report.title.replace(/[\\/:*?"<>|]/g, "_").slice(0, 100) || "report";
+			if (format === "zip") {
+				// The ZIP stays the raw evidence bundle, outside any template.
+				const response = await reportResponse(`${reportUrl(projectId, report.id, "/download")}&format=zip`);
+				const url = URL.createObjectURL(await response.blob());
+				const anchor = document.createElement("a");
+				anchor.href = url;
+				anchor.download = `${fileName}.zip`;
+				document.body.appendChild(anchor);
+				anchor.click();
+				anchor.remove();
+				window.setTimeout(() => URL.revokeObjectURL(url), 1000);
+			} else {
+				// Client-side exports: the active template decorates the header,
+				// archived images are inlined so the file is self-contained.
+				const detail = await readJson<ReportDetail>(reportUrl(projectId, report.id));
+				const template = await getActiveReportTemplate();
+				const content = await inlineArchiveImages({ ...detail, markdown: applyReportTemplate(detail.markdown, template) });
+				const watermark = buildWatermark(template);
+				const centerHeader = !isTemplateEmpty(template);
+				if (format === "md") saveBlob(new Blob([content], { type: "text/markdown; charset=utf-8" }), fileName, "md");
+				else if (format === "html") await generateHTMLFromMarkdown(content, fileName, centerHeader);
+				else if (format === "pdf") await generatePDFFromMarkdown(content, fileName, watermark, centerHeader);
+				else await generateDocxFromMarkdown(content, fileName, watermark, centerHeader);
+			}
 		} catch (failure) { void message.error(failure instanceof Error ? failure.message : String(failure)); }
 		finally { setDownloading(null); }
 	};
@@ -131,16 +171,27 @@ function ProjectReports({ projectId, refreshToken }: { projectId: string; refres
 		{ title: tx("提交时间", "Submitted"), dataIndex: "createdAt", width: 175, render: (_, report) => new Date(report.createdAt).toLocaleString(getLanguage() === "en" ? "en-US" : "zh-CN", { hour12: false }) },
 		{ title: tx("操作", "Actions"), valueType: "option", width: 150, fixed: "right", render: (_, report) => <Space size={4}>
 			<Button type="link" size="small" onClick={() => setOpenId(report.id)}>{tx("查看", "View")}</Button>
-			<Button type="text" size="small" icon={<DownloadOutlined />} title={tx("下载完整报告包（ZIP）", "Download complete report bundle (ZIP)")} aria-label={tx("下载完整报告包（ZIP）", "Download complete report bundle (ZIP)")} loading={downloading === report.id} disabled={downloading !== null} onClick={() => void download(report)} />
+			<Dropdown menu={{ items: (Object.keys(formatLabels) as ExportFormat[]).map((format) => ({ key: format, icon: <DownloadOutlined />, label: formatLabels[format] })), onClick: ({ key }) => void download(report, key as ExportFormat) }} placement="bottomRight">
+				<Button type="text" size="small" icon={<DownloadOutlined />} title={tx("导出报告", "Export report")} aria-label={tx("导出报告", "Export report")} loading={downloading === report.id} disabled={downloading !== null} />
+			</Dropdown>
 			<Button type="text" size="small" danger icon={<DeleteOutlined />} aria-label={tx("删除报告", "Delete report")} onClick={() => remove(report)} />
 		</Space> },
 	];
 	return <div className="report-center">
 		{error ? <Alert type="error" showIcon title={error} action={<Button size="small" onClick={() => setRevision((value) => value + 1)}>{tx("重试", "Retry")}</Button>} /> : null}
+		<ReportTemplatePicker
+			onClosed={() => setPickerOpen(false)}
+			onManage={() => { setPickerOpen(false); setEditorOpen(true); }}
+			open={pickerOpen}
+		/>
+		<ReportTemplateDialog onClosed={() => { setEditorOpen(false); setPickerOpen(true); }} open={editorOpen} />
 		{openId ? <ReportReader key={openId} projectId={projectId} id={openId} refreshToken={refreshToken} onBack={() => setOpenId(null)} onSaved={() => setRevision((value) => value + 1)} onDownload={download} onDelete={remove} downloading={downloading === openId} /> : <ProTable<ReportSummary>
 			rowKey="id" columns={columns} dataSource={data?.items ?? []} loading={loading} search={false} options={false}
 			cardBordered headerTitle={`${tx("项目报告", "Project reports")} · ${data?.total ?? 0}`} scroll={{ x: 1050 }}
 			toolBarRender={() => [
+				<Button key="template" icon={<FileTextOutlined />} onClick={() => setPickerOpen(true)}>
+					{activeTemplateName ? tx(`报告模板：${activeTemplateName}`, `Report template: ${activeTemplateName}`) : tx("报告模板", "Report template")}
+				</Button>,
 				<Input.Search key="search" allowClear aria-label={tx("搜索报告", "Search reports")} placeholder={tx("搜索标题、会话或工程", "Search titles, conversations or engines")} onSearch={(value) => { setSearch(value.trim()); setPage(1); }} style={{ width: 260 }} />,
 				<Select key="source" aria-label={tx("报告来源", "Report source")} allowClear placeholder={tx("全部来源", "All sources")} value={source} style={{ width: 130 }} onChange={(value: ReportSource | undefined) => { setSource(value); setPage(1); }} options={Object.entries(sourceLabels).map(([value, label]) => ({ value, label }))} />,
 				<Button key="refresh" icon={<ReloadOutlined />} aria-label={tx("刷新报告", "Refresh reports")} onClick={() => setRevision((value) => value + 1)} />,
@@ -175,7 +226,7 @@ export function ReportEditor({ report, onTitleChange, onMarkdownChange, disabled
 
 function ReportReader({ projectId, id, refreshToken, onBack, onSaved, onDownload, onDelete, downloading }: {
 	projectId: string; id: string; refreshToken: number; onBack: () => void; onSaved: () => void;
-	onDownload: (report: ReportSummary, format?: "zip" | "md") => Promise<void>; onDelete: (report: ReportSummary) => void; downloading: boolean;
+	onDownload: (report: ReportSummary, format?: ExportFormat) => Promise<void>; onDelete: (report: ReportSummary) => void; downloading: boolean;
 }) {
 	const { modal, message } = App.useApp();
 	const [report, setReport] = useState<ReportDetail | null>(null);
@@ -260,8 +311,9 @@ function ReportReader({ projectId, id, refreshToken, onBack, onSaved, onDownload
 			</Space> : <Space wrap>
 				<Segmented value={mode} onChange={setMode} options={[{ label: tx("预览", "Preview"), value: "preview" }, { label: tx("源文", "Markdown"), value: "source" }]} />
 				<Button icon={<EditOutlined />} onClick={() => { setDraft(report); setSaveError(null); }}>{tx("编辑", "Edit")}</Button>
-				<Button icon={<DownloadOutlined />} loading={downloading} onClick={() => void onDownload(report)}>{tx("下载完整报告包", "Download complete bundle")}</Button>
-				<Button type="text" disabled={downloading} onClick={() => void onDownload(report, "md")}>{tx("仅 Markdown", "Markdown only")}</Button>
+				<Dropdown menu={{ items: (Object.keys(formatLabels) as ExportFormat[]).map((format) => ({ key: format, icon: format === "zip" ? <FileZipOutlined /> : format === "docx" ? <FileWordOutlined /> : <FileTextOutlined />, label: formatLabels[format] })), onClick: ({ key }) => void onDownload(report, key as ExportFormat) }} placement="bottomRight">
+					<Button icon={<DownloadOutlined />} loading={downloading}>{tx("导出报告", "Export report")}</Button>
+				</Dropdown>
 				<Button danger icon={<DeleteOutlined />} onClick={() => onDelete(report)}>{tx("删除", "Delete")}</Button>
 			</Space> : null}
 		</Flex>

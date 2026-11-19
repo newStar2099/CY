@@ -30,6 +30,8 @@ export function interpolate(source: string, vars?: Record<string, string | numbe
 export const EN_MESSAGES: Record<string, string> = {
 	获取远端模型列表: "Fetch remote models",
 	远端模型列表: "Remote model list",
+	审阅人: "Reviewer",
+	报告日期: "Report date",
 	"使用当前 Base URL 和 API Key 查询，无需先保存；也可手动填写模型 ID。":
 		"Query the current Base URL and API key without saving. You can also enter a model ID manually.",
 	"当前协议不支持获取远端模型列表，请手动填写模型 ID。":
@@ -2776,7 +2778,7 @@ export const EN_MESSAGES: Record<string, string> = {
 	登录: "Sign in",
 	登录到工作台: "Sign in to the workbench",
 	验证码: "Captcha",
-	"验证码错误或已过期": "Captcha incorrect or expired",
+	验证码错误或已过期: "Captcha incorrect or expired",
 	不区分大小写: "Case-insensitive",
 	"看不清？换一张": "Unclear? Click to refresh",
 	白名单: "Allowlist",

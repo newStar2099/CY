@@ -1,5 +1,9 @@
 # 构建上下文瘦身：只保留源码，构建产物在镜像内重新生成。
+# （不用 **/dist 一刀切：replayd 二进制是宿主机交叉编译产物，镜像内无 Go 工具链，必须随上下文进入镜像。）
 .git
 **/node_modules
-**/dist
 **/tsconfig.tsbuildinfo
+MITM_Fuzz_Render/web/dist
+MITM_Fuzz_Render/internal/api/dist
+packages/*/dist
+packages/*/webui/dist

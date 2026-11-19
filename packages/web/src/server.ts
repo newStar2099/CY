@@ -98,6 +98,7 @@ import { switchProjectNode } from "./proxy-switch.ts";
 import { handleRemoteModelsApi } from "./remote-models-api.ts";
 import { handleReportApi } from "./report-api.ts";
 import { submitReport } from "./report-content.ts";
+import { handleReportTemplateApi } from "./report-template-api.ts";
 import { VulnReviewer } from "./reviewer.ts";
 import { SecurityChecks } from "./security-checks.ts";
 import { SubscriptionScheduler } from "./subscription-scheduler.ts";
@@ -126,6 +127,7 @@ import {
 	readContainerNetwork,
 	writeContainerNetwork,
 } from "./container-network.ts";
+import { CyRuntime } from "./cy-session.ts";
 import { gateCookieHeader, generateGateToken, hasValidGate, isGateEntry, sendGateNotFound } from "./gate.ts";
 import { getOfficialPlugin, listOfficialPlugins } from "./official-plugins.ts";
 import { readPluginPackage } from "./plugin-package.ts";
@@ -146,7 +148,6 @@ import {
 	setProxyNode,
 	testProxyNodes,
 } from "./proxy.ts";
-import { CyRuntime } from "./cy-session.ts";
 import { checkProxyProfile, hasSingboxImage, pullSingboxImage } from "./singbox.ts";
 import { SnapshotBroadcast } from "./snapshot-broadcast.ts";
 import { EMPTY_SOURCES, normalizeSources, readSources, writeSources } from "./sources.ts";
@@ -237,11 +238,7 @@ function issuePluginUiToken(hostId: string, pluginId: string): string {
 }
 
 /** A plugin's sidebar icon, proxied through the console session (same-origin <img>). */
-async function servePluginIcon(
-	runtime: CyRuntime,
-	request: IncomingMessage,
-	response: ServerResponse,
-): Promise<void> {
+async function servePluginIcon(runtime: CyRuntime, request: IncomingMessage, response: ServerResponse): Promise<void> {
 	const parts = (request.url ?? "/").split("?")[0].split("/").filter(Boolean);
 	try {
 		const hostId = decodeURIComponent(parts[1] ?? "");
@@ -1666,6 +1663,18 @@ export async function startCyServer(
 						agentDir
 							? listProjects(agentDir).projects.some((project) => project.id === id)
 							: runtime.currentProject?.id === id,
+					() =>
+						(!authEnabled || hasValidSession(currentAuth(), request)) &&
+						!consentFor(currentAuth()?.username ?? null).required,
+				);
+				return;
+			}
+			if (path === "/api/report-templates" || path.startsWith("/api/report-templates/")) {
+				void handleReportTemplateApi(
+					request,
+					response,
+					runtime.reports,
+					authEnabled ? (currentAuth()?.username ?? "") : "",
 					() =>
 						(!authEnabled || hasValidSession(currentAuth(), request)) &&
 						!consentFor(currentAuth()?.username ?? null).required,

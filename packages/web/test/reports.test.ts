@@ -154,6 +154,21 @@ test("tool uses its session provenance and returns an error instead of claiming 
 	);
 	expect(success.isError).not.toBe(true);
 	expect(store.list("p1").items[0]).toMatchObject({ sessionId: "s1", projectId: "p1" });
+	// Titles without a timestamp segment get the submission time inserted:
+	// 目标_时间_类型 per the report title format.
+	expect(store.list("p1").items[0]?.title).toMatch(/^\d{8}-\d{4}_目标报告$/);
+	const withTarget = await tool.execute(
+		"tool4",
+		{ title: "www.hytera.com_渗透测试报告", markdown: "# 结果" },
+		undefined,
+		undefined,
+		unusedContext,
+	);
+	expect(withTarget.isError).not.toBe(true);
+	// Same-second submissions tie-break by random UUID, so match by title.
+	const titles = store.list("p1").items.map((item) => item.title);
+	expect(titles).toHaveLength(2);
+	expect(titles).toContainEqual(expect.stringMatching(/^www\.hytera\.com_\d{8}-\d{4}_渗透测试报告$/));
 	expect(
 		(
 			await tool.execute(
@@ -169,7 +184,7 @@ test("tool uses its session provenance and returns an error instead of claiming 
 	expect(
 		(await tool.execute("tool3", { title: "无项目", markdown: "body" }, undefined, undefined, unusedContext)).isError,
 	).toBe(true);
-	expect(store.list("p1").total).toBe(1);
+	expect(store.list("p1").total).toBe(2);
 });
 
 test("HTTP routes scope every detail, image, download and delete to the requested existing project", async () => {
